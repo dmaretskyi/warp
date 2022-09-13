@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package warp.example.task_list;
+
+message TaskList {
+  string id = 1;
+  repeated Task tasks = 2;
+}
+
+message Task {
+  string id = 1;
+  string title = 2;
+}

@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package warp.sync;
+
+message Object {
+  string id = 1;
+  int32 version = 2;
+
+  optional bool deleted = 3;
+  optional string parent = 4;
+
+  bytes state = 10;
+
+  bytes mutation = 11;
+}

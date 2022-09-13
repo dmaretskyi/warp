@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "target": "esnext"
+  },
+  "include": [
+    "src"
+  ]
+}

@@ -1,0 +1,1 @@
+export const schemaJson = "{\"nested\":{\"warp\":{\"nested\":{\"example\":{\"nested\":{\"task_list\":{\"nested\":{\"TaskList\":{\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"tasks\":{\"rule\":\"repeated\",\"type\":\"Task\",\"id\":2}}},\"Task\":{\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"title\":{\"type\":\"string\",\"id\":2}}}}}}}}}}}"
