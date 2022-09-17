@@ -1,9 +1,11 @@
 import { kWarpInner, WarpObject } from "../schema";
 
 export class Database {
-  private objects = new Map<string, WarpObject>();
+  constructor(
+    private readonly onMutation: (mutation: string) => void,
+  ) {}
 
-  public mutations: any[] = [];
+  private objects = new Map<string, WarpObject>();
 
   import(object: WarpObject) {
     object[kWarpInner].database = this;
@@ -13,6 +15,6 @@ export class Database {
   }
 
   mutate(mutation: string) {
-    this.mutations.push(mutation);
+    this.onMutation(mutation);
   }
 }

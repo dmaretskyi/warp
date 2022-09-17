@@ -3,7 +3,7 @@ import * as uuid from 'uuid';
 import * as pb from 'protobufjs';
 import { Database } from "../database";
 
-export function generateObjectPrototype(schema: Schema, name: string): new () => WarpObject {
+export function generateObjectPrototype(schema: Schema, name: string): new (opts?: Record<string, unknown>) => WarpObject {
   const type = schema.root.lookupType(name);
 
   if(!type.fields['id']) {
@@ -11,9 +11,13 @@ export function generateObjectPrototype(schema: Schema, name: string): new () =>
   }
 
   const klass = class extends WarpObject {
-    constructor() {
+    constructor(opts?: Record<string, unknown>) {
       super();
       this[kWarpInner] = new WarpInner(type);
+      this[kWarpInner].object = this;
+      if(opts) {
+        this[kWarpInner].setMany(opts);
+      }
     }
   }
 
@@ -76,7 +80,9 @@ export class WarpObject {
 }
 
 export class WarpInner {
+  
   public id: string = uuid.v4();
+  public object!: WarpObject;
   public database?: Database;
 
   private data: any = {}
@@ -93,6 +99,20 @@ export class WarpInner {
   public set(name: string, value: unknown): void {
     this.data[name] = value;
     this.database?.mutate(this.serialize());
+  }
+
+  public setMany(opts: Record<string, unknown>) {
+    for(const [key, value] of Object.entries(opts)) {
+      if(value instanceof WarpObject) {
+        this.setRef(key, value);
+      } else if(value instanceof WarpList || Array.isArray(value)) {
+        const list = new WarpList(...value)
+        list.owner = this.object;
+        this.set(key, list);
+      } else {
+        this.set(key, value);
+      }
+    }
   }
 
   public getRef(name: string): WarpObject | undefined {
