@@ -28,7 +28,8 @@ export class Database {
   externalMutation(mutation: WObject) {
     const object = this.objects.get(mutation.id!);
     if(object) {
-      object.externalMutation(mutation);
+      const parent = mutation.parent ? this.objects.get(mutation.parent) : undefined;
+      object.externalMutation(mutation, parent);
     } else {
       const prototype = this.schema.prototypes.get(mutation.type!)!;
       const instance = new prototype();

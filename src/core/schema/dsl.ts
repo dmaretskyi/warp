@@ -153,6 +153,7 @@ export class WarpInner {
 
   public linkSlot(slot: LinkSlot) {
     assert(slot.value)
+    assert(!this.linked.has(slot.value.id), 'Already has linked slot');
     this.linked.set(slot.value.id, slot);
     slot.value[kWarpInner].parent = this.object;
 
@@ -170,6 +171,18 @@ export class WarpInner {
     obj[kWarpInner].parent = this.object;
 
     this.database?.import(obj);
+  }
+
+  public linkExternal(obj: WarpObject) {
+    // TODO: Disable since full state is set on every mutations
+    // assert(obj[kWarpInner].parent === undefined, 'Object already has a parent');
+
+    if(!this.linked.has(obj.id)) {
+      this.linked.set(obj.id, { value: obj });
+    } else {
+      this.linked.get(obj.id)!.value = obj;
+    }
+    obj[kWarpInner].parent = this.object;
   }
 
   public unlink(obj: WarpObject) {
@@ -198,12 +211,17 @@ export class WarpInner {
     assert(obj.type === this.typeName, 'Object type mismatch');
     assert(obj.parent === parent?.id, 'Object parent mismatch');
 
-    const { data, linked } = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)));
-    for(const [id, slot] of linked) {
-      this.linked.set(id, slot);
-    }
+    const data = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)), id => {
+      if(this.linked.has(id)) {
+        return this.linked.get(id)!;
+      } else {
+        const slot: LinkSlot = {};
+        this.linked.set(id, slot);
+        return slot;
+      }
+    });
     this.data = data;
-    parent?.link(this.object);
+    parent?.linkExternal(this.object);
   }
 }
 
@@ -227,7 +245,7 @@ function prepareData(data: any): any {
 }
 
 // TODO: Use schema.
-function prepareDataReverse(data: any, linked = new Map<string, LinkSlot>()): { data: any, linked: Map<string, LinkSlot> } {
+function prepareDataReverse(data: any, link: (id: string) => LinkSlot): any {
   if(typeof data === 'object' && data !== null) {
     const res: Record<string, any> = {};
     for(const [key, value] of Object.entries(data)) {
@@ -235,20 +253,19 @@ function prepareDataReverse(data: any, linked = new Map<string, LinkSlot>()): { 
         res[key] = new WarpList(...value.map(value => {
           if(typeof value === 'object' && Object.keys(value).length === 1 && value.id) {
             // Will be filed in later.
-            const slot = { value: undefined };
-            linked.set(value.id, slot);
+            const slot = link(value.id)
             return slot;
           } else {
-            return prepareDataReverse(value, linked).data;
+            return prepareDataReverse(value, link);
           }
         }));
       } else {
-        res[key] = prepareDataReverse(value, linked).data;
+        res[key] = prepareDataReverse(value, link);
       }
     }
-    return { data: res, linked }
+    return res
   } else {
-    return { data, linked }
+    return data
   }
 }
 
@@ -302,10 +319,10 @@ export class WarpList<T> implements Array<T> {
 
   serialize(): Record<string, any>[] {
     return this.data.map(item => {
-      if(item instanceof WarpObject) {
-        return { id: item.id };
+      if(item.value instanceof WarpObject) {
+        return { id: item.value.id };
       }
-      return prepareData(item);
+      return prepareData(item.value);
     });
   }
 
@@ -324,7 +341,7 @@ export class WarpList<T> implements Array<T> {
     throw new Error("Method not implemented.");
   }
   push(...items: T[]): number {
-    const res = this.data.push(items.map(item => ({ value: item })) as any);
+    const res = this.data.push(...items.map(item => ({ value: item })) as any);
     for(const obj of items) {
       if(obj instanceof WarpObject) {
         this.owner?.[kWarpInner].link(obj);
