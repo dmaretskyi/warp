@@ -1,8 +1,20 @@
+import { inspect } from "util";
 import { Database } from "."; 
-import { WarpObject } from "../schema";
+import { WObject } from "../gen/sync";
+import { Schema, WarpObject } from "../schema";
 
-export function createClient(url: string) {
+export function createClient(schema: Schema, url: string) {
   return new Database(mutation => {
-    console.log(mutation);
+    printMutation(schema, mutation);
   });
+}
+
+function printMutation(schema: Schema, mutation: WObject) {
+  const type = schema.root.lookupType(mutation.type!);
+  const state = mutation.state && type.decode(mutation.state);
+
+  console.log(inspect({
+    ...mutation,
+    state,
+  }, false, null, true));
 }

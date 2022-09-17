@@ -2,6 +2,8 @@ import { Schema } from "./schema";
 import * as uuid from 'uuid';
 import * as pb from 'protobufjs';
 import { Database } from "../database";
+import { WObject } from "../gen/sync";
+import { assert } from "console";
 
 export function generateObjectPrototype(schema: Schema, name: string): new (opts?: Record<string, unknown>) => WarpObject {
   const type = schema.root.lookupType(name);
@@ -84,13 +86,19 @@ export class WarpInner {
   public id: string = uuid.v4();
   public object!: WarpObject;
   public database?: Database;
+  public parent?: WarpObject;
 
-  private data: any = {}
+  private data: Record<string, any> = {}
+
   private linked = new Map<string, WarpObject>();
 
   constructor(
     public type: pb.Type,
   ) {}
+
+  get typeName() {
+    return this.type.fullName.slice(1);
+  }
 
   public get(name: string, defaultValue?: unknown): unknown {
     return this.data[name] ??= defaultValue;
@@ -127,34 +135,55 @@ export class WarpInner {
       prev[kWarpInner].unlink(prev);
     }
 
-    this.set(name, value.id);
+    this.set(name, { id: value.id });
   }
 
   public link(obj: WarpObject) {
+    assert(obj[kWarpInner].parent === undefined, 'Object already has a parent');
+
     this.linked.set(obj.id, obj);
+    obj[kWarpInner].parent = this.object;
 
     this.database?.import(obj);
   }
 
   public unlink(obj: WarpObject) {
+    assert(obj[kWarpInner].parent === this.object, 'Object is not a child of this object');
+
     this.linked.delete(obj.id);
+    obj[kWarpInner].parent = undefined;
   }
 
-  serialize(): string {
-    return JSON.stringify({ id: this.id, ...this.data }, (key, value) => {
-      if(value instanceof WarpObject) {
-        return value.id;
-      }
-      if(value instanceof WarpList) {
-        return value.serialize();
-      }
-
-      return value;
-    });
+  serialize(): WObject {
+    return WObject.create({
+      id: this.id,
+      type: this.typeName,
+      version: 0,
+      parent: this.parent?.id,
+      state: this.type.encode(prepareData(this.data)).finish(),
+    })
   }
 
   flush() {
     this.database?.mutate(this.serialize());
+  }
+}
+
+function prepareData(data: any): any {
+  if(typeof data === 'object' && data !== null) {
+    const res: Record<string, any> = {};
+    for(const [key, value] of Object.entries(data)) {
+      if(value instanceof WarpObject) {
+        res[key] = { id: value.id };
+      } else if(value instanceof WarpList) {
+        res[key] = value.serialize();
+      } else {
+        res[key] = prepareData(value);
+      }
+    }
+    return res
+  } else {
+    return data
   }
 }
 
@@ -198,12 +227,12 @@ export class WarpList<T> implements Array<T> {
     }
   }
 
-  serialize(): string[] {
+  serialize(): Record<string, any>[] {
     return this.data.map(item => {
       if(item instanceof WarpObject) {
-        return item.id;
+        return { id: item.id };
       }
-      return JSON.stringify(item);
+      return prepareData(item);
     });
   }
 

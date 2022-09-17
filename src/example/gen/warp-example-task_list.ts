@@ -1,7 +1,7 @@
 import { generateObjectPrototype, Schema, WarpList } from "../../core/schema";
 import { schemaJson } from './schema'
 
-const schema = Schema.fromJson(schemaJson);
+export const schema = Schema.fromJson(schemaJson);
 
 export class TaskList extends generateObjectPrototype(schema, 'warp.example.task_list.TaskList') {
   constructor(opts?: { tasks?: Array<Task> }) {

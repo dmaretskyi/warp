@@ -1,8 +1,9 @@
+import { WObject } from "../gen/sync";
 import { kWarpInner, WarpObject } from "../schema";
 
 export class Database {
   constructor(
-    private readonly onMutation: (mutation: string) => void,
+    private readonly onMutation: (mutation: WObject) => void,
   ) {}
 
   private objects = new Map<string, WarpObject>();
@@ -14,7 +15,7 @@ export class Database {
     object[kWarpInner].flush()
   }
 
-  mutate(mutation: string) {
+  mutate(mutation: WObject) {
     this.onMutation(mutation);
   }
 }

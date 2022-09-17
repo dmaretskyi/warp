@@ -1,4 +1,4 @@
-import { Task, TaskList } from "./gen/warp-example-task_list"
+import { Task, TaskList, schema } from "./gen/warp-example-task_list"
 import expect from 'expect'
 import { Database } from "../core/database"
 import { createClient } from "../core/database/client"
@@ -6,7 +6,7 @@ import { createClient } from "../core/database/client"
 it('data dsl', () => {
   const taskList = new TaskList()
 
-  const database = createClient('')
+  const database = createClient(schema, '')
   database.import(taskList)
 
   taskList.tasks.push(new Task({ title: 'Buy milk' }))
