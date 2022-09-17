@@ -1,14 +1,16 @@
 import { Task, TaskList, schema } from "./gen/warp-example-task_list"
 import expect from 'expect'
 import { Database } from "../core/database"
-import { debugReplication } from "../core/database/utils"
+import { createClient } from "../core/database/client"
+import { bindReplicationSockets } from "../core/database/utils"
 
-it('data dsl', () => {
-  const database = new Database(schema)
-  debugReplication(database.replicate(), schema)
-
+it.only('replication', () => {
+  const server = new Database(schema)
+  const client = new Database(schema)
+  bindReplicationSockets(server.replicate(), client.replicate(), schema)
+  
   const taskList = new TaskList()
-  database.import(taskList)
+  client.import(taskList)
 
   taskList.tasks.push(new Task({ title: 'Buy milk' }))
   taskList.tasks.push(new Task({ title: 'Buy eggs' }))

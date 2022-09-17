@@ -84,7 +84,7 @@ export class WarpObject {
 export class WarpInner {
   
   public id: string = uuid.v4();
-  public object!: WarpObject;
+  public object?: WarpObject;
   public database?: Database;
   public parent?: WarpObject;
 
@@ -167,6 +167,13 @@ export class WarpInner {
   flush() {
     this.database?.mutate(this.serialize());
   }
+
+  externalMutation(obj: WObject) {
+    assert(obj.id === this.id, 'Object id mismatch');
+    assert(obj.type === this.typeName, 'Object type mismatch');
+
+    this.data = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)));
+  }
 }
 
 function prepareData(data: any): any {
@@ -179,6 +186,22 @@ function prepareData(data: any): any {
         res[key] = value.serialize();
       } else {
         res[key] = prepareData(value);
+      }
+    }
+    return res
+  } else {
+    return data
+  }
+}
+
+function prepareDataReverse(data: any): any {
+  if(typeof data === 'object' && data !== null) {
+    const res: Record<string, any> = {};
+    for(const [key, value] of Object.entries(data)) {
+       if(Array.isArray(value)) {
+        res[key] = new WarpList(...value.map(prepareDataReverse));
+      } else {
+        res[key] = prepareDataReverse(value);
       }
     }
     return res
