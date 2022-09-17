@@ -5,7 +5,14 @@ import { Database } from "../database";
 import { WObject } from "../gen/sync";
 import { assert } from "console";
 
-export function generateObjectPrototype(schema: Schema, name: string): new (opts?: Record<string, unknown>) => WarpObject {
+export interface WarpPrototype {
+  new (opts?: Record<string, unknown>): WarpObject
+
+  readonly type: pb.Type
+  readonly typeName: string;
+}
+
+export function generateObjectPrototype(schema: Schema, name: string): WarpPrototype {
   const type = schema.root.lookupType(name);
 
   if(!type.fields['id']) {
@@ -13,6 +20,9 @@ export function generateObjectPrototype(schema: Schema, name: string): new (opts
   }
 
   const klass = class extends WarpObject {
+    static readonly type = type;
+    static readonly typeName = name;
+
     constructor(opts?: Record<string, unknown>) {
       super();
       this[kWarpInner] = new WarpInner(type);
@@ -84,7 +94,7 @@ export class WarpObject {
 export class WarpInner {
   
   public id: string = uuid.v4();
-  public object?: WarpObject;
+  public object!: WarpObject;
   public database?: Database;
   public parent?: WarpObject;
 
@@ -168,11 +178,13 @@ export class WarpInner {
     this.database?.mutate(this.serialize());
   }
 
-  externalMutation(obj: WObject) {
+  externalMutation(obj: WObject, parent?: WarpInner) {
     assert(obj.id === this.id, 'Object id mismatch');
     assert(obj.type === this.typeName, 'Object type mismatch');
+    assert(obj.parent === parent?.id, 'Object parent mismatch');
 
     this.data = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)));
+    parent?.link(this.object);
   }
 }
 

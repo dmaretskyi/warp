@@ -10,6 +10,7 @@ export class TaskList extends generateObjectPrototype(schema, 'warp.example.task
   
   declare tasks: WarpList<Task>;
 }
+schema.registerPrototype(TaskList);
 
 export class Task extends generateObjectPrototype(schema, 'warp.example.task_list.Task') {
   constructor(opts?: { title?: string }) {
@@ -19,3 +20,4 @@ export class Task extends generateObjectPrototype(schema, 'warp.example.task_lis
   declare readonly id: string;
   declare title: string;
 }
+schema.registerPrototype(Task);

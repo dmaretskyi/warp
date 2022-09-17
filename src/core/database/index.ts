@@ -30,10 +30,14 @@ export class Database {
     if(object) {
       object.externalMutation(mutation);
     } else {
-      const object = new WarpInner(this.schema.root.lookupType(mutation.type!));
+      const prototype = this.schema.prototypes.get(mutation.type!)!;
+      const instance = new prototype();
+
+      const object = instance[kWarpInner];
       object.database = this;
       object.id = mutation.id!;
-      object.externalMutation(mutation);
+      const parent = mutation.parent ? this.objects.get(mutation.parent) : undefined;
+      object.externalMutation(mutation, parent);
       this.objects.set(object.id, object);
     }
   }
