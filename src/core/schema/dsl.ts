@@ -61,7 +61,7 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
         },
       })
     } else if(field.name === 'id') {
-      Object.defineProperty(klass.prototype, field.name, {
+      Object.defineProperty(klass.prototype, 'id', {
         get(this: WarpObject) {
           return this[kWarpInner].id;
         },
@@ -87,7 +87,7 @@ export const kWarpInner = Symbol('WarpInner');
 export class WarpObject {
   protected [kWarpInner]!: WarpInner;
 
-  readonly id!: string;
+  declare readonly id: string;
 
   constructor() {}
 }

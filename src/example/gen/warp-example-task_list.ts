@@ -8,6 +8,7 @@ export class TaskList extends generateObjectPrototype(schema, 'warp.example.task
     super(opts);
   }
   
+  declare readonly id: string;
   declare tasks: WarpList<Task>;
 }
 schema.registerPrototype(TaskList);
