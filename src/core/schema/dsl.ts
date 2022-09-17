@@ -3,7 +3,8 @@ import * as uuid from 'uuid';
 import * as pb from 'protobufjs';
 import { Database } from "../database";
 import { WObject } from "../gen/sync";
-import { assert } from "console";
+import assert from "assert";
+import { inspect } from "util";
 
 export interface WarpPrototype {
   new (opts?: Record<string, unknown>): WarpObject
@@ -38,12 +39,12 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
     if(field.repeated) {
       Object.defineProperty(klass.prototype, field.name, {
         get(this: WarpObject) {
-          const defaultValue = new WarpList()
+          const defaultValue = WarpList.create()
           defaultValue.owner = this;
           return this[kWarpInner].get(field.name, defaultValue)
         },
         set(this: WarpObject, value: unknown) {
-          const list = value instanceof WarpList ? value : new WarpList(...value as any);
+          const list = value instanceof WarpList ? value : WarpList.create(...value as any);
           list.owner = this;
           list.flush();
 
@@ -91,6 +92,8 @@ export class WarpObject {
   constructor() {}
 }
 
+export type LinkSlot = { value?: WarpObject }
+
 export class WarpInner {
   
   public id: string = uuid.v4();
@@ -100,7 +103,7 @@ export class WarpInner {
 
   private data: Record<string, any> = {}
 
-  private linked = new Map<string, WarpObject>();
+  private linked = new Map<string, LinkSlot>();
 
   constructor(
     public type: pb.Type,
@@ -134,7 +137,7 @@ export class WarpInner {
   }
 
   public getRef(name: string): WarpObject | undefined {
-    return this.data[name] ? this.linked.get(this.data[name])! : undefined;
+    return this.data[name] ? this.linked.get(this.data[name])?.value : undefined;
   }
 
   public setRef(name: string, value: WarpObject): void {
@@ -148,10 +151,22 @@ export class WarpInner {
     this.set(name, { id: value.id });
   }
 
+  public linkSlot(slot: LinkSlot) {
+    assert(slot.value)
+    this.linked.set(slot.value.id, slot);
+    slot.value[kWarpInner].parent = this.object;
+
+    this.database?.import(slot.value);
+  }    
+
   public link(obj: WarpObject) {
     assert(obj[kWarpInner].parent === undefined, 'Object already has a parent');
 
-    this.linked.set(obj.id, obj);
+    if(!this.linked.has(obj.id)) {
+      this.linked.set(obj.id, { value: obj });
+    } else {
+      this.linked.get(obj.id)!.value = obj;
+    }
     obj[kWarpInner].parent = this.object;
 
     this.database?.import(obj);
@@ -183,11 +198,16 @@ export class WarpInner {
     assert(obj.type === this.typeName, 'Object type mismatch');
     assert(obj.parent === parent?.id, 'Object parent mismatch');
 
-    this.data = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)));
+    const { data, linked } = prepareDataReverse(this.type.toObject(this.type.decode(obj.state)));
+    for(const [id, slot] of linked) {
+      this.linked.set(id, slot);
+    }
+    this.data = data;
     parent?.link(this.object);
   }
 }
 
+// TODO: Use schema.
 function prepareData(data: any): any {
   if(typeof data === 'object' && data !== null) {
     const res: Record<string, any> = {};
@@ -206,19 +226,29 @@ function prepareData(data: any): any {
   }
 }
 
-function prepareDataReverse(data: any): any {
+// TODO: Use schema.
+function prepareDataReverse(data: any, linked = new Map<string, LinkSlot>()): { data: any, linked: Map<string, LinkSlot> } {
   if(typeof data === 'object' && data !== null) {
     const res: Record<string, any> = {};
     for(const [key, value] of Object.entries(data)) {
        if(Array.isArray(value)) {
-        res[key] = new WarpList(...value.map(prepareDataReverse));
+        res[key] = new WarpList(...value.map(value => {
+          if(typeof value === 'object' && Object.keys(value).length === 1 && value.id) {
+            // Will be filed in later.
+            const slot = { value: undefined };
+            linked.set(value.id, slot);
+            return slot;
+          } else {
+            return prepareDataReverse(value, linked).data;
+          }
+        }));
       } else {
-        res[key] = prepareDataReverse(value);
+        res[key] = prepareDataReverse(value, linked).data;
       }
     }
-    return res
+    return { data: res, linked }
   } else {
-    return data
+    return { data, linked }
   }
 }
 
@@ -226,30 +256,38 @@ export class WarpList<T> implements Array<T> {
   public database?: Database;
   public owner?: WarpObject;
 
-  private readonly data: T[];
+  private readonly data: { value?: T }[];
 
-  constructor(...items: T[]) {
-    this.data = [...items];
+  static create<T>(...items: T[]): WarpList<T> {
+    return new WarpList(...items.map((value) => ({ value })));
+  }
+
+  constructor(...items: { value?: T }[]) {
+    this.data = items;
 
     return new Proxy(this, {
       get: (target, key) => {
         if(typeof key === 'string' && key.match(/^\d+$/)) {
-          return this.data[parseInt(key)]
+          return this.data[parseInt(key)].value
         }
 
         return Reflect.get(target, key);
       },
       set: (target, key, value) => {
         if(typeof key === 'string' && key.match(/^\d+$/)) {
-          this.data[parseInt(key)] = value;
+          const slot: LinkSlot = { value };
+          this.data[parseInt(key)] = slot as any;
+
+          if(value instanceof WarpObject) {
+            this.owner?.[kWarpInner].linkSlot(slot);
+          }
+          this.owner?.[kWarpInner].flush();
+
+          return true;
+        } else {
+          return Reflect.set(target, key, value);
         }
 
-        if(value instanceof WarpObject) {
-          this.owner?.[kWarpInner].link(value);
-        }
-        this.owner?.[kWarpInner].flush();
-
-        return Reflect.set(target, key, value);
       },
     })
   }
@@ -286,7 +324,7 @@ export class WarpList<T> implements Array<T> {
     throw new Error("Method not implemented.");
   }
   push(...items: T[]): number {
-    const res = this.data.push(...items);
+    const res = this.data.push(items.map(item => ({ value: item })) as any);
     for(const obj of items) {
       if(obj instanceof WarpObject) {
         this.owner?.[kWarpInner].link(obj);

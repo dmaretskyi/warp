@@ -4,7 +4,7 @@ import { Database } from "../core/database"
 import { createClient } from "../core/database/client"
 import { bindReplicationSockets } from "../core/database/utils"
 
-it.only('replication', () => {
+it('replication', () => {
   const server = new Database(schema)
 
   let serverSideTaskList: TaskList
