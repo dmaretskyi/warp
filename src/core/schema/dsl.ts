@@ -3,8 +3,8 @@ import * as uuid from 'uuid';
 import * as pb from 'protobufjs';
 import { Database } from "../database";
 import { WObject } from "../gen/sync";
-import assert from "assert";
 import { inspect } from "util";
+import { assert } from "../assert";
 
 export interface WarpPrototype {
   new (opts?: Record<string, unknown>): WarpObject
@@ -394,7 +394,7 @@ export class WarpList<T> implements Array<T> {
     throw new Error("Method not implemented.");
   }
   map<U>(callbackfn: (value: T, index: number, array: T[]) => U, thisArg?: any): U[] {
-    throw new Error("Method not implemented.");
+    return this.data.map((item, index) => callbackfn(item.value as T, index, this));
   }
   filter<S extends T>(predicate: (value: T, index: number, array: T[]) => value is S, thisArg?: any): S[];
   filter(predicate: (value: T, index: number, array: T[]) => unknown, thisArg?: any): T[];

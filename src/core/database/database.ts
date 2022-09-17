@@ -1,4 +1,4 @@
-import { assert } from "console";
+import { assert } from "../assert";
 import { WObject } from "../gen/sync";
 import { kWarpInner, Schema, WarpInner, WarpObject } from "../schema";
 

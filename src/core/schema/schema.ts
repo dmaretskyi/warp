@@ -1,5 +1,5 @@
-import assert from 'assert';
 import * as pb from 'protobufjs'
+import { assert } from '../assert';
 import { WarpObject, WarpPrototype } from './dsl'
 
 export class Schema {
