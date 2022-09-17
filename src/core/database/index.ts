@@ -1,7 +1,6 @@
 import { assert } from "console";
 import { WObject } from "../gen/sync";
 import { kWarpInner, Schema, WarpInner, WarpObject } from "../schema";
-import { formatMutation } from "./utils";
 
 export class Database {
   private replicationHook?: (mutation: WObject) => void;
@@ -9,6 +8,10 @@ export class Database {
   constructor(public readonly schema: Schema) {}
 
   private objects = new Map<string, WarpInner>();
+
+  getRootObject(): WarpInner | undefined {
+    return Array.from(this.objects.values()).find((object) => object.parent === undefined);
+  }
 
   import(object: WarpObject) {
     const inner = object[kWarpInner];
@@ -38,21 +41,25 @@ export class Database {
   replicate(): ReplicationSocket {
     return {
       bind: ({ onMessage }) => {
-        assert(this.replicationHook === undefined, 'Only one replication socket is supported');
-        this.replicationHook = (mutation) => {
-          onMessage(WObject.toBinary(mutation));
-        };
-
-        for(const object of this.objects.values()) {
-          const wobject = object.serialize();
-          onMessage(WObject.toBinary(wobject));
-        }
-        
         return {
           receiveMessage: (message) => {
             const wobject = WObject.fromBinary(message);
             this.externalMutation(wobject);
           },
+          start: () => {
+            assert(this.replicationHook === undefined, 'Only one replication socket is supported');
+            this.replicationHook = (mutation) => {
+              onMessage(WObject.toBinary(mutation));
+            };
+    
+            for(const object of this.objects.values()) {
+              const wobject = object.serialize();
+              onMessage(WObject.toBinary(wobject));
+            }
+          },
+          stop: () => {
+            this.replicationHook = undefined;
+          }
         }
       }
     }
@@ -65,6 +72,8 @@ export interface BindParams {
 
 export interface BindResult {
   receiveMessage: (message: Uint8Array) => void;
+  start: () => void;
+  stop: () => void;
 }
 
 export interface ReplicationSocket {

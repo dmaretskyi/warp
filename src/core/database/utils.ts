@@ -27,12 +27,22 @@ export function bindReplicationSockets(left: ReplicationSocket, right: Replicati
       leftResult.receiveMessage(message);
     }
   });
+
+  leftResult.start();
+  rightResult.start();
+
+  return () => {
+    leftResult.stop();
+    rightResult.stop();
+  }
 }
 
 export function debugReplication(socket: ReplicationSocket, schema: Schema) {
-  socket.bind({
+  const res = socket.bind({
     onMessage: (message) => {
       console.log(formatMutation(schema, WObject.fromBinary(message)));
     }
   });
+  res.start();
+  return () => res.stop()
 }
