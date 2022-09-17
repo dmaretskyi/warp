@@ -6,7 +6,8 @@
   "scripts": {
     "gen": "node -r @swc-node/register src/core/codegen/main.ts",
     "test": "mocha -r @swc-node/register 'src/**/*.test.ts'",
-    "run:client": "vite dev"
+    "run:client": "vite dev",
+    "run:server": "node -r @swc-node/register src/example/server/main.ts"
   },
   "keywords": [],
   "author": "",
