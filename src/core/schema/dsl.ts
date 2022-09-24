@@ -112,7 +112,7 @@ export class WarpInner {
   public database?: Database;
   public parent?: WarpObject;
 
-  public version: number = NaN;
+  public version: number = 0;
 
   private data: Record<string, any> = {}
 
@@ -245,11 +245,7 @@ export class WarpInner {
   }
   
   bumpVersion() {
-    if(isNaN(this.version)) {
-      this.version = 0;
-    } else {
-      this.version++;
-    }
+    this.version++;
   }  
 
   propagateUpdate() {

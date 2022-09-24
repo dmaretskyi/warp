@@ -4,7 +4,7 @@ import { createClient } from "../../core/database/client";
 import { onUpdate, versionOf, WarpObject } from "../../core/schema";
 import { schema, Task, TaskList } from "../gen/warp-example-task_list";
 
-const database = new Database(schema)
+const database = createClient(schema, 'ws://localhost:1122')
 
 const useObject = (obj?: WarpObject | null) => {
   const [, forceUpdate] = useState({})
