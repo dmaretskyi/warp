@@ -94,6 +94,17 @@ export class WarpObject {
 
 export type LinkSlot = { value?: WarpObject }
 
+export function versionOf(obj: WarpObject) {
+  return obj[kWarpInner].version;
+}
+
+export function onUpdate(obj: WarpObject, callback: () => void) {
+  obj[kWarpInner].updateHooks.add(callback);
+  return () => {
+    obj[kWarpInner].updateHooks.delete(callback);
+  }
+}
+
 export class WarpInner {
   
   public id: string = uuid.v4();
@@ -101,9 +112,13 @@ export class WarpInner {
   public database?: Database;
   public parent?: WarpObject;
 
+  public version: number = NaN;
+
   private data: Record<string, any> = {}
 
   private linked = new Map<string, LinkSlot>();
+
+  public updateHooks = new Set<() => void>();
 
   constructor(
     public type: pb.Type,
@@ -120,6 +135,7 @@ export class WarpInner {
   public set(name: string, value: unknown): void {
     this.data[name] = value;
     this.database?.mutate(this.serialize());
+    this.propagateUpdate();
   }
 
   public setMany(opts: Record<string, unknown>) {
@@ -196,7 +212,7 @@ export class WarpInner {
     return WObject.create({
       id: this.id,
       type: this.typeName,
-      version: 0,
+      version: this.version,
       parent: this.parent?.id,
       state: this.type.encode(prepareData(this.data)).finish(),
     })
@@ -222,6 +238,28 @@ export class WarpInner {
     });
     this.data = data;
     parent?.linkExternal(this.object);
+
+    this.version = obj.version;
+
+    this.propagateUpdate();
+  }
+  
+  bumpVersion() {
+    if(isNaN(this.version)) {
+      this.version = 0;
+    } else {
+      this.version++;
+    }
+  }  
+
+  propagateUpdate() {
+    for(const hook of this.updateHooks) {
+      hook();
+    }
+
+    if(this.parent) {
+      this.parent[kWarpInner].propagateUpdate();
+    }
   }
 }
 
@@ -347,7 +385,9 @@ export class WarpList<T> implements Array<T> {
         this.owner?.[kWarpInner].link(obj);
       }
     }
+    this.owner?.[kWarpInner].bumpVersion();
     this.owner?.[kWarpInner].flush();
+    this.owner?.[kWarpInner].propagateUpdate();
     return res;
   }
   concat(...items: ConcatArray<T>[]): T[];
