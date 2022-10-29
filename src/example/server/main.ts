@@ -1,3 +1,4 @@
+import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
 import { Database } from '../../core/database';
 import { schema } from '../gen/warp-example-task_list';
@@ -9,14 +10,14 @@ const server = new WebSocket.Server({
 });
 
 server.on('connection', function (socket) {
-  console.log('new client')
+  const id = v4()
+  console.log('new client', id)
   try {
-
-
-    const replicator = database.replicate();
+    const replicator = database.replicateUpstream();
 
     const { start, stop, receiveMessage } = replicator.bind({
       onMessage: async (message) => {
+        console.log('snd', id)
         socket.send(message);
       }
     })
@@ -24,6 +25,7 @@ server.on('connection', function (socket) {
 
     // When you receive a message, send that message to every socket.
     socket.on('message', function (msg) {
+      console.log('rcv', id)
       receiveMessage(Buffer.from(msg as any));
     });
 

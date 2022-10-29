@@ -8,7 +8,7 @@ import { kWarpInner } from "../core/schema"
 describe('data dsl', () => {
   it('props', () => {
     const database = new Database(schema)
-    debugReplication(database.replicate(), (message) => {
+    debugReplication(database.replicateDownstream(), (message) => {
       // console.log(formatMutation(schema, WObject.fromBinary(message)));
     })
 
@@ -23,7 +23,7 @@ describe('data dsl', () => {
 
   it('array', () => {
     const database = new Database(schema)
-    debugReplication(database.replicate(), (message) => {
+    debugReplication(database.replicateDownstream(), (message) => {
       // console.log(formatMutation(schema, WObject.fromBinary(message)));
     })
 

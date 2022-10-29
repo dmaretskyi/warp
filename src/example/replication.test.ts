@@ -11,7 +11,7 @@ describe('replication', () => {
     const server = new Database(schema)
 
     const client = new Database(schema)
-    bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+    bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
       // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
     })
 
@@ -37,7 +37,7 @@ describe('replication', () => {
     let serverSideTaskList: TaskList
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+      const stop = bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
         // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
       })
 
@@ -52,7 +52,7 @@ describe('replication', () => {
 
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+      const stop = bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
         // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
       })
 

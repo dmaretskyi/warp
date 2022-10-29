@@ -48,9 +48,8 @@ export class Database {
     this.flush(); // TODO: Defer.
   }
 
-  // v1 stuff
-
-  private replicationHook?: (mutation: WObject) => void;
+  private downstreamReplication?: (mutation: WObject) => void;
+  private upstreamReplication = new Set<(mutation: WObject) => void>();
 
   getRootObject(): DataObject | undefined {
     return Array.from(this.objects.values()).find((ref) => ref.getObject() && ref.getObject()!.getParent() === undefined)?.getObject();
@@ -74,15 +73,27 @@ export class Database {
     }
     this.dirtyObjects.clear();
     for(const mutation of mutations) {
-      this.replicationHook?.(mutation);
+      this.downstreamReplication?.(mutation);
+      for(const hook of this.upstreamReplication) {
+        hook(mutation);
+      }
     }
   }
 
   externalMutation(mutation: WObject) {
     const ref = this.objects.get(mutation.id!);
     if(ref?.getObject()) {
-      ref.getObject()!.deserialize(mutation);
-      ref.getObject()!.onImport(this);
+      const obj = ref.getObject()!
+
+      if(WObject.equals(mutation, obj.serialize())) {
+        return;
+      }
+
+      obj.deserialize(mutation);
+      obj.onImport(this);
+      obj.propagateUpdate();
+      
+      this.markDirty(obj);
     } else {
       const prototype = this.schema.prototypes.get(mutation.type!)!;
       const instance = new prototype();
@@ -94,7 +105,10 @@ export class Database {
     }
   }
 
-  replicate(): ReplicationSocket {
+  /**
+   * Replicate with a server that has more authority over the data.
+   */
+  replicateDownstream(): ReplicationSocket {
     return {
       bind: ({ onMessage }) => {
         return {
@@ -103,8 +117,8 @@ export class Database {
             this.externalMutation(wobject);
           },
           start: () => {
-            assert(this.replicationHook === undefined, 'Only one replication socket is supported');
-            this.replicationHook = (mutation) => {
+            assert(this.downstreamReplication === undefined, 'Only one downstream replication socket is supported');
+            this.downstreamReplication = (mutation) => {
               onMessage(WObject.toBinary(mutation));
             };
     
@@ -116,7 +130,40 @@ export class Database {
             this.flush();
           },
           stop: () => {
-            this.replicationHook = undefined;
+            this.downstreamReplication = undefined;
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Replicate with a client that forks and mutates the data (less authority).
+   */
+  replicateUpstream(): ReplicationSocket {
+    return {
+      bind: ({ onMessage }) => {
+        const hook = (mutation: WObject) => {
+          onMessage(WObject.toBinary(mutation));
+        };
+
+        return {
+          receiveMessage: (message) => {
+            const wobject = WObject.fromBinary(message);
+            this.externalMutation(wobject);
+          },
+          start: () => {
+            this.upstreamReplication.add(hook); 
+    
+            for(const object of this.objects.values()) {
+              if(object.getObject()) {
+                this.markDirty(object.getObject()!);
+              }
+            }
+            this.flush();
+          },
+          stop: () => {
+            this.upstreamReplication.delete(hook);
           }
         }
       }

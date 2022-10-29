@@ -7,7 +7,7 @@ export function createClient(schema: Schema, url: string) {
   console.log('create client', url);
 
   const database = new Database(schema);
-  const replicator = database.replicate();
+  const replicator = database.replicateDownstream();
 
   const socket = new WebSocket(url);
 
