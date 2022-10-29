@@ -7,8 +7,8 @@ import { inspect } from "util";
 import { assert } from "../assert";
 import { DataArray, DataObject, DataRef, DataValue } from "../database/data";
 
-export interface WarpPrototype {
-  new (opts?: Record<string, unknown>): WarpObject
+export interface WarpPrototype<T extends WarpObject = WarpObject> {
+  new (opts?: Record<string, unknown>): T
 
   readonly type: pb.Type
   readonly typeName: string;
@@ -35,6 +35,8 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
         }
       }
     }
+
+   
   }
 
   for(const field of type.fieldsArray) {
@@ -88,6 +90,33 @@ export class WarpObject {
   declare readonly id: string;
 
   constructor() {}
+
+  toJSON() {
+    const res: any = {};
+    res.id = this.id;
+    res['@type'] = this[kWarpInner].data.typeName;
+    for(const field of this[kWarpInner].data.schemaType.fieldsArray) {
+      if(field.name === 'id') {
+        continue;
+      }
+
+      const value = unwrapData(this[kWarpInner].data.get(field.name))
+      if(value instanceof WarpObject) {
+        res[field.name] = value.toJSON();
+      } else if(value instanceof WarpList) {
+        res[field.name] = value.map((v) => {
+          if(v instanceof WarpObject) {
+            return v.toJSON();
+          } else {
+            return v;
+          }
+        });
+      } else {
+        res[field.name] = value;
+      }
+    }
+    return res;
+  }
 }
 
 export type LinkSlot = { value?: WarpObject }
@@ -173,8 +202,9 @@ export class WarpList<T> implements Array<T> {
           this.data.items[parseInt(key)] = wrapped;
           if(wrapped instanceof DataRef && wrapped.getObject()) {
             this.data.ownerObject?.database?.import(wrapped.getObject()!);
-            this.data.ownerObject?.markDirty()
           }
+          this.data.ownerObject?.markDirty()
+          this.data.ownerObject?.propagateUpdate();
           return true;
         } else {
           return Reflect.set(target, key, value);
@@ -210,6 +240,7 @@ export class WarpList<T> implements Array<T> {
     }
     const res = this.data.items.push(...newItems);
     this.data.ownerObject?.markDirty();
+    this.data.ownerObject?.propagateUpdate();
     return res;
   }
   concat(...items: ConcatArray<T>[]): T[];

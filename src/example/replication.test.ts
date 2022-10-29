@@ -21,8 +21,7 @@ describe('replication', () => {
     taskList.tasks.push(new Task({ title: 'Buy milk' }))
     taskList.tasks.push(new Task({ title: 'Buy eggs' }))
 
-    const root = server.getRootObject()!;
-    const serverSideTaskList = root.frontend as TaskList;
+    const serverSideTaskList = server.getOrCreateRoot(TaskList);
 
     expect(serverSideTaskList.id).toEqual(taskList.id)
     expect(serverSideTaskList.tasks.length).toEqual(2)
@@ -57,8 +56,7 @@ describe('replication', () => {
         // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
       })
 
-      const root = client.getRootObject()!;
-      const taskList = root.frontend as TaskList;
+      const taskList = client.getOrCreateRoot(TaskList);
 
       expect(taskList.id).toEqual(serverSideTaskList.id)
       expect(taskList.tasks.length).toEqual(2)

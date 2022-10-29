@@ -69,6 +69,9 @@ export class DataObject {
     for(const listener of this.updateListeners) {
       listener();
     }
+    if(this.parent?.getObject()) {
+      this.parent.getObject()!.propagateUpdate();
+    }
   }
 
   onImport(database: Database) {

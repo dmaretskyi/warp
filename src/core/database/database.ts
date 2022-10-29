@@ -1,6 +1,6 @@
 import { assert } from "../assert";
 import { WObject } from "../gen/sync";
-import { kWarpInner, Schema, WarpInner, WarpObject } from "../schema";
+import { kWarpInner, Schema, WarpInner, WarpObject, WarpPrototype } from "../schema";
 import { DataObject, DataRef } from "./data";
 
 export class Database {
@@ -54,6 +54,17 @@ export class Database {
 
   getRootObject(): DataObject | undefined {
     return Array.from(this.objects.values()).find((ref) => ref.getObject() && ref.getObject()!.getParent() === undefined)?.getObject();
+  }
+
+  getOrCreateRoot<T extends WarpObject>(prototype: WarpPrototype<T>): T {
+    const root = this.getRootObject();
+    if(root) {
+      return root.frontend as T;
+    } else {
+      const instance = new prototype();
+      this.import(instance[kWarpInner].data);
+      return instance;
+    }
   }
 
   flush() {

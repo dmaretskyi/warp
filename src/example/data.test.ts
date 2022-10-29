@@ -75,8 +75,7 @@ describe('data dsl', () => {
     }))
 
 
-    const root = database.getRootObject()!;
-    const taskList = root.frontend as TaskList;
+    const taskList = database.getOrCreateRoot(TaskList);
     expect(taskList.id).toEqual('600fa93e-0609-41ee-b391-41a69661ed05')
     expect(taskList.tasks.length).toBe(2)
     expect(taskList.tasks[0].id).toEqual('bdd1262f-0def-4d31-a144-0742189c0724')
@@ -127,8 +126,7 @@ describe('data dsl', () => {
       },
     }))
 
-    const root = database.getRootObject()!;
-    const taskList = root.frontend as TaskList;
+    const taskList = database.getOrCreateRoot(TaskList);
     expect(taskList.id).toEqual('600fa93e-0609-41ee-b391-41a69661ed05')
     expect(taskList.tasks.length).toBe(2)
     expect(taskList.tasks[0].id).toEqual('bdd1262f-0def-4d31-a144-0742189c0724')

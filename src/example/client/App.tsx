@@ -11,9 +11,31 @@ const useObject = (obj?: WarpObject | null) => {
 
   useEffect(() => {
     if(obj) {
-      return onUpdate(obj, () => forceUpdate({}))
+      return onUpdate(obj, () => {
+        console.log('update', obj)
+        forceUpdate({})
+      })
     }
   }, [obj?.id])
+}
+
+
+export const ManualJsonView = () => {
+  const getData = () => {
+    return {
+      objects: Array.from(database.objects.values()).filter(ref => ref.getObject()).map(ref => ref.getObject()!.frontend),
+    }
+  }
+
+  const [jsonView, setJsonView] = useState(JSON.stringify(getData(), null, 2));
+  
+  useEffect(() => {
+    setInterval(() => {
+      setJsonView(JSON.stringify(getData(), null, 2))
+    }, 500)
+  })
+
+  return <pre style={{ minHeight: 400 }}>{jsonView}</pre>
 }
 
 export const App = () => {
@@ -21,32 +43,31 @@ export const App = () => {
 
   useEffect(() => {
     setTimeout(() => {
-      if(database.getRootObject()?.frontend) {
-        setTaskList(database.getRootObject()?.frontend as TaskList);
-      } else {
-        const taskList = new TaskList()
-        console.log(taskList)
-        database.import(taskList[kWarpInner].data);
-        setTaskList(taskList);
-      }
+      const taskList = database.getOrCreateRoot(TaskList);
+      setTaskList(taskList);
     }, 200);
   })
 
-  useObject(taskList);
+  useObject(taskList)
 
   const addTask = () => { 
     taskList?.tasks.push(new Task({ title: 'New task' }));
     console.log(taskList);
   };
+
+  const editTask = (task: Task, newTitle: string) => {
+    task.title = newTitle;
+  }
+
   return (
     <div>
-      <pre>{JSON.stringify(taskList)}</pre>
+      <ManualJsonView/>
       <button onClick={addTask}>Add Task</button>
       {taskList && <div>
         {taskList.tasks.map(task => (
           <div key={task.id}>
             {/* <input type="checkbox" checked={task.done} onChange={e => task.done = e.target.checked} /> */}
-            <input type="text" value={task.title} onChange={e => task.title = e.target.value} />
+            <input type="text" value={task.title} onChange={e => editTask(task, e.currentTarget.value)} />
           </div>
         ))}  
       </div>}
