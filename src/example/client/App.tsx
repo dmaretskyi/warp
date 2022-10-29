@@ -1,6 +1,5 @@
 import { schema, Task, TaskList } from "../gen/warp-example-task_list";
 import { useDatabase, useObject } from "./common";
-import { TaskListView } from "./TaskList";
 
 export const App = () => {
   const taskList = useDatabase(TaskList, { schema, url: 'ws://localhost:1122' })
