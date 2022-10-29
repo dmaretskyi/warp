@@ -35,7 +35,7 @@ export const ManualJsonView = () => {
     }, 500)
   })
 
-  return <pre style={{ minHeight: 400 }}>{jsonView}</pre>
+  return <pre style={{ minHeight: 400, display: 'block', flex: 1 }}>{jsonView}</pre>
 }
 
 export const App = () => {
@@ -60,17 +60,19 @@ export const App = () => {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'row'}}>
+      <div style={{ flex: 1 }}>
+        <button onClick={addTask}>Add Task</button>
+        {taskList && <div>
+          {taskList.tasks.map(task => (
+            <div key={task.id}>
+              {/* <input type="checkbox" checked={task.done} onChange={e => task.done = e.target.checked} /> */}
+              <input type="text" value={task.title} onChange={e => editTask(task, e.currentTarget.value)} />
+            </div>
+          ))}  
+        </div>}
+      </div>
       <ManualJsonView/>
-      <button onClick={addTask}>Add Task</button>
-      {taskList && <div>
-        {taskList.tasks.map(task => (
-          <div key={task.id}>
-            {/* <input type="checkbox" checked={task.done} onChange={e => task.done = e.target.checked} /> */}
-            <input type="text" value={task.title} onChange={e => editTask(task, e.currentTarget.value)} />
-          </div>
-        ))}  
-      </div>}
     </div>
   );
 }

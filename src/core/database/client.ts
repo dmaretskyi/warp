@@ -4,6 +4,8 @@ import { WObject } from "../gen/sync";
 import { Schema, WarpObject } from "../schema";
 
 export function createClient(schema: Schema, url: string) {
+  console.log('create client', url);
+
   const database = new Database(schema);
   const replicator = database.replicate();
 
