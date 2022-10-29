@@ -2,14 +2,17 @@ import { Task, TaskList, schema } from "./gen/warp-example-task_list"
 import expect from 'expect'
 import { Database } from "../core/database"
 import { createClient } from "../core/database/client"
-import { bindReplicationSockets } from "../core/database/utils"
+import { bindReplicationSockets, formatMutation } from "../core/database/utils"
+import { WObject } from "../core/gen/sync"
 
 describe('replication', () => {
   it('client to server', () => {
     const server = new Database(schema)
 
     const client = new Database(schema)
-    bindReplicationSockets(server.replicate(), client.replicate(), schema)
+    bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+      // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
+    })
 
     const taskList = new TaskList()
     client.import(taskList)
@@ -34,7 +37,9 @@ describe('replication', () => {
     let serverSideTaskList: TaskList
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicate(), client.replicate(), schema)
+      const stop = bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+        // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
+      })
 
       const taskList = serverSideTaskList = new TaskList()
       client.import(taskList)
@@ -47,7 +52,9 @@ describe('replication', () => {
 
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicate(), client.replicate(), schema)
+      const stop = bindReplicationSockets(server.replicate(), client.replicate(), (direction, message) => {
+        // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
+      })
 
       const root = client.getRootObject()!;
       const taskList = root.object as TaskList;

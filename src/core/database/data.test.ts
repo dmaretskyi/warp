@@ -4,7 +4,7 @@ import { v4 } from 'uuid';
 import { expect } from 'expect';
 import { Database } from './database';
 
-describe.only('database/data', () => {
+describe('database/data', () => {
   it('basic props', () => {
     const task = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), v4());
     expect(task.get('title')).toBe('');

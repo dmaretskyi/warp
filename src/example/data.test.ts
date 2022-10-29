@@ -1,12 +1,14 @@
 import { Task, TaskList, schema } from "./gen/warp-example-task_list"
 import expect from 'expect'
 import { Database } from "../core/database"
-import { debugReplication } from "../core/database/utils"
+import { debugReplication, formatMutation } from "../core/database/utils"
 import { WObject } from "../core/gen/sync"
 
 it('data dsl', () => {
   const database = new Database(schema)
-  debugReplication(database.replicate(), schema)
+  debugReplication(database.replicate(), (message) => {
+    // console.log(formatMutation(schema, WObject.fromBinary(message)));
+  })
 
   const taskList = new TaskList()
   database.import(taskList)

@@ -13,17 +13,17 @@ export function formatMutation(schema: Schema, mutation: WObject) {
   }, false, null, true);
 }
 
-export function bindReplicationSockets(left: ReplicationSocket, right: ReplicationSocket, schema: Schema) {
+export function bindReplicationSockets(left: ReplicationSocket, right: ReplicationSocket, onMessage: (direction: '>' | '<', message: Uint8Array) => void) {
   const leftResult = left.bind({
     onMessage: (message) => {
-      console.log('> ', formatMutation(schema, WObject.fromBinary(message)));
+      onMessage('>', message);
       rightResult.receiveMessage(message);
     }
   });
 
   const rightResult = right.bind({
     onMessage: (message) => {
-      console.log('< ', formatMutation(schema, WObject.fromBinary(message)));
+      onMessage('<', message);
       leftResult.receiveMessage(message);
     }
   });
@@ -37,12 +37,8 @@ export function bindReplicationSockets(left: ReplicationSocket, right: Replicati
   }
 }
 
-export function debugReplication(socket: ReplicationSocket, schema: Schema) {
-  const res = socket.bind({
-    onMessage: (message) => {
-      console.log(formatMutation(schema, WObject.fromBinary(message)));
-    }
-  });
+export function debugReplication(socket: ReplicationSocket, onMessage: (message: Uint8Array) => void) {
+  const res = socket.bind({ onMessage });
   res.start();
   return () => res.stop()
 }
