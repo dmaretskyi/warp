@@ -10,4 +10,17 @@ message TaskList {
 message Task {
   string id = 1;
   string title = 2;
+  int32 count = 3;
+  bool completed = 4;
+}
+
+message Person {
+  string id = 1;
+  string name = 2;
+  Contact contact = 3;
+}
+
+message Contact {
+  string id = 1;
+  string email = 2;
 }

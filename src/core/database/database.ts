@@ -1,11 +1,49 @@
 import { assert } from "../assert";
 import { WObject } from "../gen/sync";
 import { kWarpInner, Schema, WarpInner, WarpObject } from "../schema";
+import { DataObject, DataRef } from "./data";
 
 export class Database {
-  private replicationHook?: (mutation: WObject) => void;
 
   constructor(public readonly schema: Schema) {}
+
+  public objectsV2 = new Map<string, DataRef>();
+
+  createRef(id: string, existing?: DataRef): DataRef {
+    if(existing) {
+      assert(existing.id === id);
+    }
+
+    let ref = this.objectsV2.get(id);
+    if(!ref) {
+      ref = new DataRef(id);
+      this.objectsV2.set(id, ref);
+    }
+
+    if(existing) {
+      const currentObject = ref.getObject();
+      const providedObject = existing.getObject()
+      if(providedObject) {
+        if(currentObject) {
+          assert(currentObject === existing.getObject());
+        } else  {
+          this.importV2(providedObject);
+        }
+      }
+    }
+
+    return ref;
+  }
+
+  importV2(object: DataObject) {
+    const ref = this.createRef(object.id);
+    ref.fill(object);
+    object.onImport(this);
+  }
+
+  // v1 stuff
+
+  private replicationHook?: (mutation: WObject) => void;
 
   private objects = new Map<string, WarpInner>();
 

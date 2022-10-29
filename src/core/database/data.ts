@@ -22,7 +22,17 @@ export class DataObject {
   private data: Record<string, DataValue> = {};
 
   get(key: string): DataValue {
-    return this.data[key];
+    const value = this.data[key];
+    if(value) {
+      return value;
+    }
+
+    assert(this.schemaType.fields[key], `Unknown field: ${key}`);
+    if(this.schemaType.fields[key].repeated) {
+      return (this.data[key] = new DataArray(this));
+    } else {
+      return (this.data[key] = this.schemaType.fields[key].defaultValue);
+    }
   }
 
   set(key: string, value: DataValue) {
@@ -35,8 +45,34 @@ export class DataObject {
     array.items.push(value);
   }
 
+  getParent() {
+    return this.parent;
+  }
+
   setParent(parent: DataRef) {
     this.parent = parent;
+  }
+
+  onImport(database: Database) {
+    this.database = database;
+
+    if(this.parent) {
+      this.parent = database.createRef(this.parent.id, this.parent);
+    }
+
+    for(const field of this.schemaType.fieldsArray) {
+      const value = this.get(field.name);
+      if(value instanceof DataRef) {
+        this.set(field.name, database.createRef(value.id, value));
+      } else if(value instanceof DataArray) {
+        for(let i = 0; i < value.items.length; i++) {
+          const item = value.items[i];
+          if(item instanceof DataRef) {
+            value.items[i] = database.createRef(item.id, item);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -76,5 +112,9 @@ export class DataRef {
 }
 
 export class DataArray {
+  constructor(
+    public readonly ownerObject: DataObject,
+  ) {}
+
   public readonly items: DataValue[] = [];
 }
