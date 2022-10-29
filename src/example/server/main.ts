@@ -1,9 +1,15 @@
+import { writeFileSync } from 'fs';
 import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
 import { Database } from '../../core/database';
-import { schema } from '../gen/warp-example-task_list';
+import { schema, TaskList } from '../gen/warp-example-task_list';
 
 const database = new Database(schema)
+const taskList = database.getOrCreateRoot(TaskList);
+
+setInterval(() => {
+  writeFileSync('data.json', JSON.stringify(taskList, null, 2))
+}, 100)
 
 const server = new WebSocket.Server({
   port: 1122
