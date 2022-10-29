@@ -17,9 +17,20 @@ export class DataObject {
     public readonly id: string,
   ) {}
 
+  get typeName() {
+    return this.schemaType.fullName.slice(1);
+  }
+
   private database?: Database;
   private parent?: DataRef;
   private data: Record<string, DataValue> = {};
+
+  public readonly updateListeners = new Set<() => void>();
+
+  /**
+   * Generated frontend object with getters and setters for each field.
+   */
+  public frontend?: any;
 
   get(key: string): DataValue {
     const value = this.data[key];
@@ -53,40 +64,89 @@ export class DataObject {
     this.parent = parent;
   }
 
+  public markDirty() {
+    this.database?.markDirty(this);
+  }
+
+  public propagateUpdate() {
+    for(const listener of this.updateListeners) {
+      listener();
+    }
+  }
+
   onImport(database: Database) {
     this.database = database;
 
     if(this.parent) {
-      this.parent = database.createRef(this.parent.id, this.parent);
+      this.parent = this.database.createRef(this.parent.id, this.parent);
     }
 
     for(const field of this.schemaType.fieldsArray) {
       const value = this.get(field.name);
       if(value instanceof DataRef) {
-        this.set(field.name, database.createRef(value.id, value));
+        this.set(field.name, this.database.createRef(value.id, value));
       } else if(value instanceof DataArray) {
         for(let i = 0; i < value.items.length; i++) {
           const item = value.items[i];
           if(item instanceof DataRef) {
-            value.items[i] = database.createRef(item.id, item);
+            value.items[i] = this.database.createRef(item.id, item);
           }
         }
       }
     }
   }
 
-  /**
-   * Return pending mutations for this object.
-   */
-  flush(): WObject {
-    return WObject.create();
+  serialize(): WObject {
+    return WObject.create({
+      id: this.id,
+      type: this.typeName,
+      version: 0,
+      parent: this.parent?.id,
+      state: this.schemaType.encode(serializationPreprocess(this.data)).finish(),
+    })
   }
 
-  /**
-   * Apply external mutation to this object.
-   */
-  applyMutation(mutation: WObject) {
+  deserialize(snapshot: WObject) {
+    assert(snapshot.id === this.id);
 
+    this.parent = snapshot.parent ? new DataRef(snapshot.parent) : undefined;
+    this.data = deserializationPostprocess(this.schemaType.toObject(this.schemaType.decode(snapshot.state)), this) as any;
+  }
+}
+
+function serializationPreprocess(data: DataValue | Record<string, DataValue>): any {
+  if(data instanceof DataRef) {
+    return { id: data.id };
+  } else if(data instanceof DataArray) {
+    return data.items.map(serializationPreprocess);
+  } else if(typeof data === 'object') {
+    const res: Record<string, any> = {};
+    for(const key of Object.keys(data)) {
+      res[key] = serializationPreprocess(data[key]);
+    }
+    return res;
+  } else {
+    return data;
+  }
+}
+
+function deserializationPostprocess(data: any, owner: DataObject): DataValue | Record<string, DataValue> {
+  if(data.id) {
+    return new DataRef(data.id);
+  } else if(Array.isArray(data)) {
+    const array = new DataArray(owner);
+    for(const item of data) {
+      array.items.push(deserializationPostprocess(item, owner) as any);
+    }
+    return array;
+  } else if(typeof data === 'object') {
+    const res: Record<string, DataValue> = {};
+    for(const key of Object.keys(data)) {
+      res[key] = deserializationPostprocess(data[key], owner) as any;
+    }
+    return res;
+  } else {
+    return data;
   }
 }
 

@@ -7,7 +7,8 @@ export class Database {
 
   constructor(public readonly schema: Schema) {}
 
-  public objectsV2 = new Map<string, DataRef>();
+  public readonly objectsV2 = new Map<string, DataRef>();
+  public readonly dirtyObjects = new Set<DataObject>();
 
   createRef(id: string, existing?: DataRef): DataRef {
     if(existing) {
@@ -39,6 +40,10 @@ export class Database {
     const ref = this.createRef(object.id);
     ref.fill(object);
     object.onImport(this);
+  }
+
+  markDirty(object: DataObject) {
+    this.dirtyObjects.add(object);
   }
 
   // v1 stuff
