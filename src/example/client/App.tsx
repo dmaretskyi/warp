@@ -1,46 +1,36 @@
-import { useEffect, useState } from "react";
-import { Database } from "../../core/database";
-import { createClient } from "../../core/database/client";
-import { kWarpInner, onUpdate, WarpObject } from "../../core/schema";
 import { schema, Task, TaskList } from "../gen/warp-example-task_list";
+import { useDatabase, useObject } from "./common";
 import { TaskListView } from "./TaskList";
 
-const database = createClient(schema, 'ws://localhost:1122')
-
-
 export const App = () => {
-  const [taskList, setTaskList] = useState<TaskList | null>(null);
+  const taskList = useDatabase(TaskList, { schema, url: 'ws://localhost:1122' })
 
-  useEffect(() => {
-    setTimeout(() => {
-      const taskList = database.getOrCreateRoot(TaskList);
-      setTaskList(taskList);
-    }, 200);
-  })
+  useObject(taskList)
 
+  const addTask = () => {
+    taskList?.tasks.push(new Task({ title: 'New task' }));
+  };
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'row'}}>
-      {taskList && <TaskListView taskList={taskList}/>}
-    </div>
-  );
-}
-
-export const ManualJsonView = () => {
-  const getData = () => {
-    // return {
-    //   objects: Array.from(database.objects.values()).filter(ref => ref.getObject()).map(ref => ref.getObject()!.frontend),
-    // }
-    return database.getRootObject()?.frontend ?? null
+  const editTaskTitle = (task: Task, newTitle: string) => {
+    task.title = newTitle;
   }
 
-  const [jsonView, setJsonView] = useState(JSON.stringify(getData(), null, 2));
-  
-  useEffect(() => {
-    setInterval(() => {
-      setJsonView(JSON.stringify(getData(), null, 2))
-    }, 500)
-  })
-
-  return <pre style={{ minHeight: 400, display: 'block', flex: 1 }}>{jsonView}</pre>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row' }}>
+      <div style={{ flex: 1 }}>
+        <div>
+          {taskList && taskList.tasks.map(task => (
+            <div key={task.id}>
+              <input type="checkbox" checked={task.completed} onChange={e => task.completed = e.target.checked} />
+              <input type="text" value={task.title} onChange={e => editTaskTitle(task, e.currentTarget.value)} />
+            </div>
+          ))}
+        </div>
+        <button onClick={addTask}>
+          Add Task
+        </button>
+      </div>
+    </div>
+  )
 }
+
