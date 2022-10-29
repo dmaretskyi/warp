@@ -14,7 +14,7 @@ export class TaskList extends generateObjectPrototype(schema, 'warp.example.task
 schema.registerPrototype(TaskList);
 
 export class Task extends generateObjectPrototype(schema, 'warp.example.task_list.Task') {
-  constructor(opts?: { title?: string }) {
+  constructor(opts?: { title?: string, count?: number, completed?: boolean }) {
     super(opts);
   }
 
