@@ -4,6 +4,7 @@ import { Database } from "../core/database"
 import { createClient } from "../core/database/client"
 import { bindReplicationSockets, formatMutation } from "../core/database/utils"
 import { WObject } from "../core/gen/sync"
+import { kWarpInner } from "../core/schema"
 
 describe('replication', () => {
   it('client to server', () => {
@@ -15,13 +16,13 @@ describe('replication', () => {
     })
 
     const taskList = new TaskList()
-    client.import(taskList)
+    client.import(taskList[kWarpInner].data)
 
     taskList.tasks.push(new Task({ title: 'Buy milk' }))
     taskList.tasks.push(new Task({ title: 'Buy eggs' }))
 
     const root = server.getRootObject()!;
-    const serverSideTaskList = root.object as TaskList;
+    const serverSideTaskList = root.frontend as TaskList;
 
     expect(serverSideTaskList.id).toEqual(taskList.id)
     expect(serverSideTaskList.tasks.length).toEqual(2)
@@ -42,7 +43,7 @@ describe('replication', () => {
       })
 
       const taskList = serverSideTaskList = new TaskList()
-      client.import(taskList)
+      client.import(taskList[kWarpInner].data)
 
       taskList.tasks.push(new Task({ title: 'Buy milk' }))
       taskList.tasks.push(new Task({ title: 'Buy eggs' }))
@@ -57,7 +58,7 @@ describe('replication', () => {
       })
 
       const root = client.getRootObject()!;
-      const taskList = root.object as TaskList;
+      const taskList = root.frontend as TaskList;
 
       expect(taskList.id).toEqual(serverSideTaskList.id)
       expect(taskList.tasks.length).toEqual(2)

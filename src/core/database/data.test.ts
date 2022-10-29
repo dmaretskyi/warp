@@ -50,8 +50,8 @@ describe('database/data', () => {
       person.set('contact', new DataRef(contact.id));
       contact.setParent(new DataRef(person.id));
 
-      database.importV2(person);
-      database.importV2(contact);
+      database.import(person);
+      database.import(contact);
 
       expect(person.get('contact')).toBeInstanceOf(DataRef);
       expect((person.get('contact') as DataRef).getObject()).toStrictEqual(contact);
@@ -74,9 +74,9 @@ describe('database/data', () => {
       task2.setParent(new DataRef(taskList.id));
       (taskList.get('tasks') as DataArray).items.push(new DataRef(task2.id));
 
-      database.importV2(taskList);
-      database.importV2(task1);
-      database.importV2(task2);
+      database.import(taskList);
+      database.import(task1);
+      database.import(task2);
 
       expect((taskList.get('tasks') as DataArray).items.length).toEqual(2);
       expect(((taskList.get('tasks') as DataArray).items[0] as DataRef).getObject()).toStrictEqual(task1);
@@ -115,11 +115,11 @@ describe('database/data', () => {
       
       const person = new DataObject(schema.root.lookupType('warp.example.task_list.Person'), originalPerson.id);
       person.deserialize(originalPerson.serialize());
-      database.importV2(person);
+      database.import(person);
 
       const contact = new DataObject(schema.root.lookupType('warp.example.task_list.Contact'), originalContact.id);
       contact.deserialize(originalContact.serialize());
-      database.importV2(contact);
+      database.import(contact);
 
       expect(person.get('contact')).toBeInstanceOf(DataRef);
       expect((person.get('contact') as DataRef).getObject()).toStrictEqual(contact);
@@ -145,15 +145,15 @@ describe('database/data', () => {
 
       const taskList = new DataObject(schema.root.lookupType('warp.example.task_list.TaskList'), originalTaskList.id);
       taskList.deserialize(originalTaskList.serialize());
-      database.importV2(taskList);
+      database.import(taskList);
 
       const task1 = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), originalTask1.id);
       task1.deserialize(originalTask1.serialize());
-      database.importV2(task1);
+      database.import(task1);
 
       const task2 = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), originalTask2.id);
       task2.deserialize(originalTask2.serialize());
-      database.importV2(task2);
+      database.import(task2);
 
       expect((taskList.get('tasks') as DataArray).items.length).toEqual(2);
       expect(((taskList.get('tasks') as DataArray).items[0] as DataRef).getObject()).toStrictEqual(task1);

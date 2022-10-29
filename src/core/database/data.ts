@@ -14,14 +14,14 @@ export type DataValue =
 export class DataObject {
   constructor(
     public readonly schemaType: pb.Type,
-    public readonly id: string,
+    public id: string,
   ) {}
 
   get typeName() {
     return this.schemaType.fullName.slice(1);
   }
 
-  private database?: Database;
+  public database?: Database;
   private parent?: DataRef;
   private data: Record<string, DataValue> = {};
 
@@ -47,13 +47,10 @@ export class DataObject {
   }
 
   set(key: string, value: DataValue) {
+    if(value instanceof DataArray) {
+      value.ownerObject = this;
+    }
     this.data[key] = value;
-  }
-
-  arrayPush(key: string, value: DataValue) {
-    const array = this.get(key);
-    assert(array instanceof DataArray);
-    array.items.push(value);
   }
 
   getParent() {
@@ -82,6 +79,9 @@ export class DataObject {
     }
 
     for(const field of this.schemaType.fieldsArray) {
+      if(field.name === 'id') {
+        continue;
+      }
       const value = this.get(field.name);
       if(value instanceof DataRef) {
         this.set(field.name, this.database.createRef(value.id, value));
@@ -162,7 +162,7 @@ export class DataRef {
   }
 
   fill(object: DataObject): this {
-    assert(this.object === undefined);
+    assert(this.object === undefined || this.object === object);
     assert(object.id === this.id);
 
     this.object = object;
@@ -173,7 +173,7 @@ export class DataRef {
 
 export class DataArray {
   constructor(
-    public readonly ownerObject: DataObject,
+    public ownerObject?: DataObject,
   ) {}
 
   public readonly items: DataValue[] = [];

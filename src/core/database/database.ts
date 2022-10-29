@@ -7,7 +7,7 @@ export class Database {
 
   constructor(public readonly schema: Schema) {}
 
-  public readonly objectsV2 = new Map<string, DataRef>();
+  public readonly objects = new Map<string, DataRef>();
   public readonly dirtyObjects = new Set<DataObject>();
 
   createRef(id: string, existing?: DataRef): DataRef {
@@ -15,10 +15,10 @@ export class Database {
       assert(existing.id === id);
     }
 
-    let ref = this.objectsV2.get(id);
+    let ref = this.objects.get(id);
     if(!ref) {
       ref = new DataRef(id);
-      this.objectsV2.set(id, ref);
+      this.objects.set(id, ref);
     }
 
     if(existing) {
@@ -28,7 +28,7 @@ export class Database {
         if(currentObject) {
           assert(currentObject === existing.getObject());
         } else  {
-          this.importV2(providedObject);
+          this.import(providedObject);
         }
       }
     }
@@ -36,53 +36,50 @@ export class Database {
     return ref;
   }
 
-  importV2(object: DataObject) {
+  import(object: DataObject) {
     const ref = this.createRef(object.id);
     ref.fill(object);
     object.onImport(this);
+    this.markDirty(object);
   }
 
   markDirty(object: DataObject) {
     this.dirtyObjects.add(object);
+    this.flush(); // TODO: Defer.
   }
 
   // v1 stuff
 
   private replicationHook?: (mutation: WObject) => void;
 
-  private objects = new Map<string, WarpInner>();
-
-  getRootObject(): WarpInner | undefined {
-    return Array.from(this.objects.values()).find((object) => object.parent === undefined);
+  getRootObject(): DataObject | undefined {
+    return Array.from(this.objects.values()).find((ref) => ref.getObject() && ref.getObject()!.getParent() === undefined)?.getObject();
   }
 
-  import(object: WarpObject) {
-    const inner = object[kWarpInner];
-
-    inner.database = this;
-    this.objects.set(inner.id, inner);
-    inner.flush()
-  }
-
-  mutate(mutation: WObject) {
-    this.replicationHook?.(mutation);
+  flush() {
+    const mutations: WObject[] = [];
+    for(const id of this.dirtyObjects) {
+      mutations.push(id.serialize());
+    }
+    this.dirtyObjects.clear();
+    for(const mutation of mutations) {
+      this.replicationHook?.(mutation);
+    }
   }
 
   externalMutation(mutation: WObject) {
-    const object = this.objects.get(mutation.id!);
-    if(object) {
-      const parent = mutation.parent ? this.objects.get(mutation.parent) : undefined;
-      object.externalMutation(mutation, parent);
+    const ref = this.objects.get(mutation.id!);
+    if(ref?.getObject()) {
+      ref.getObject()!.deserialize(mutation);
+      ref.getObject()!.onImport(this);
     } else {
       const prototype = this.schema.prototypes.get(mutation.type!)!;
       const instance = new prototype();
 
-      const object = instance[kWarpInner];
-      object.database = this;
-      object.id = mutation.id!;
-      const parent = mutation.parent ? this.objects.get(mutation.parent) : undefined;
-      object.externalMutation(mutation, parent);
-      this.objects.set(object.id, object);
+      const inner = instance[kWarpInner];
+      inner.data.id = mutation.id!;
+      inner.data.deserialize(mutation);
+      this.import(inner.data);
     }
   }
 
@@ -101,9 +98,11 @@ export class Database {
             };
     
             for(const object of this.objects.values()) {
-              const wobject = object.serialize();
-              onMessage(WObject.toBinary(wobject));
+              if(object.getObject()) {
+                this.markDirty(object.getObject()!);
+              }
             }
+            this.flush();
           },
           stop: () => {
             this.replicationHook = undefined;

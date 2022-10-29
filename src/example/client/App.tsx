@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Database } from "../../core/database";
 import { createClient } from "../../core/database/client";
-import { onUpdate, versionOf, WarpObject } from "../../core/schema";
+import { kWarpInner, onUpdate, WarpObject } from "../../core/schema";
 import { schema, Task, TaskList } from "../gen/warp-example-task_list";
 
 const database = createClient(schema, 'ws://localhost:1122')
@@ -21,12 +21,12 @@ export const App = () => {
 
   useEffect(() => {
     setTimeout(() => {
-      if(database.getRootObject()?.object) {
-        setTaskList(database.getRootObject()?.object as TaskList);
+      if(database.getRootObject()?.frontend) {
+        setTaskList(database.getRootObject()?.frontend as TaskList);
       } else {
         const taskList = new TaskList()
         console.log(taskList)
-        database.import(taskList);
+        database.import(taskList[kWarpInner].data);
         setTaskList(taskList);
       }
     }, 200);
@@ -36,7 +36,7 @@ export const App = () => {
 
   const addTask = () => { 
     taskList?.tasks.push(new Task({ title: 'New task' }));
-    console.log(taskList && versionOf(taskList));
+    console.log(taskList);
   };
   return (
     <div>
