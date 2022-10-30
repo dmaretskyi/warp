@@ -41,7 +41,7 @@ export class Database {
     assert(object instanceof DataObject);
     const ref = this.createRef(object.id);
     ref.fill(object);
-    object.markDirty(['$all']);
+    object.markDirty(['$all']); // TODO(dmaretskyi): Don't mark as dirty if we're receiving the object from the server.
     object.database = this;
     object.updateReferences();
     this.markDirty(object);
@@ -96,14 +96,18 @@ export class Database {
         mutations.push(obj.serialize());
       }
       
-      this.dirtyObjects.clear();
       for(const mutation of mutations) {
         for(const hook of this.upstreamReplication) {
           hook(mutation);
         }
       }
     }
-   
+
+    for(const obj of Array.from(this.dirtyObjects)) {
+      if(obj.dirtyFields.size === 0) {
+        this.dirtyObjects.delete(obj);
+      }
+    }
   }
 
   /**
@@ -121,10 +125,14 @@ export class Database {
       const prototype = this.schema.prototypes.get(mutation.type!)!;
       const instance = new prototype();
 
-      const inner = instance[kWarpInner];
-      inner.id = mutation.id!;
-      inner.deserialize(mutation);
-      this.import(inner);
+      const data = instance[kWarpInner];
+      data.id = mutation.id!;
+      data.deserialize(mutation);
+      const ref = this.createRef(data.id);
+      ref.fill(data);
+      data.database = this;
+      data.updateReferences();
+      data.propagateUpdate();
     }
   }
 

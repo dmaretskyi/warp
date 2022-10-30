@@ -174,7 +174,7 @@ describe('database/data', () => {
       const server = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), client.id);
 
       server.deserializeMutation(client.serializeMutation());
-      expect(client.get('title')).toBe('Eggs');
+      expect(server.get('title')).toBe('Eggs');
       
       server.commit()
       client.deserialize(server.serialize());
@@ -184,6 +184,33 @@ describe('database/data', () => {
       server.deserializeMutation(client.serializeMutation());
       expect(client.get('title')).toBe('Eggs');
       expect(client.get('count')).toBe(2);
+    })
+
+    it('local mutation are rebased on top of server state', () => {
+      const client = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), v4());
+      client.markDirty()
+      client.set('title', 'Eggs');
+
+      const server = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), client.id);
+
+      server.deserializeMutation(client.serializeMutation());
+      server.commit()
+      expect(server.get('title')).toBe('Eggs');
+
+      client.set('title', 'Eggs and milk');
+
+      client.deserialize(server.serialize());
+      expect(client.dirtyFields.size).toBe(1);
+      expect(client.get('title')).toBe('Eggs and milk');
+      
+      server.deserializeMutation(client.serializeMutation());
+      server.commit()
+      client.deserialize(server.serialize());
+
+
+      expect(client.get('title')).toBe('Eggs and milk');
+      expect(server.get('title')).toBe('Eggs and milk');
+      expect(client.dirtyFields.size).toBe(0);
     })
   })
 })
