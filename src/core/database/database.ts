@@ -41,6 +41,7 @@ export class Database {
     assert(object instanceof DataObject);
     const ref = this.createRef(object.id);
     ref.fill(object);
+    object.markDirty(['$all']);
     object.database = this;
     object.updateReferences();
     this.markDirty(object);

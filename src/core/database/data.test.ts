@@ -3,6 +3,7 @@ import { Contact, schema } from '../../example/gen/schema'
 import { v4 } from 'uuid';
 import { expect } from 'expect';
 import { Database } from './database';
+import { snapshotToJson } from './utils';
 
 describe('database/data', () => {
   it('basic props', () => {
@@ -114,6 +115,7 @@ describe('database/data', () => {
       const database = new Database(schema);
       
       const person = new DataObject(schema.root.lookupType('warp.example.task_list.Person'), originalPerson.id);
+
       person.deserialize(originalPerson.serialize());
       database.import(person);
 
@@ -160,6 +162,28 @@ describe('database/data', () => {
       expect(task1.getParent()?.getObject()).toStrictEqual(taskList);
       expect(((taskList.get('tasks') as DataArray).items[1] as DataRef).getObject()).toStrictEqual(task2);
       expect(task2.getParent()?.getObject()).toStrictEqual(taskList);
+    })
+  })
+
+  describe('partial mutations', () => {
+    it('basic fields with no races', () => {
+      const client = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), v4());
+      client.markDirty()
+      client.set('title', 'Eggs');
+
+      const server = new DataObject(schema.root.lookupType('warp.example.task_list.Task'), client.id);
+
+      server.deserializeMutation(client.serializeMutation());
+      expect(client.get('title')).toBe('Eggs');
+      
+      server.commit()
+      client.deserialize(server.serialize());
+      expect(client.dirtyFields.size).toBe(0);
+
+      client.set('count', 2);
+      server.deserializeMutation(client.serializeMutation());
+      expect(client.get('title')).toBe('Eggs');
+      expect(client.get('count')).toBe(2);
     })
   })
 })

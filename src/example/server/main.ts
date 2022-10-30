@@ -1,4 +1,4 @@
-import { writeFileSync, openSync, writeSync } from 'fs';
+import { writeFileSync, openSync, writeSync, appendFileSync } from 'fs';
 import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
 import { Database, snapshotToJson } from '../../core/database';
@@ -12,7 +12,7 @@ setInterval(() => {
   writeFileSync('data.json', JSON.stringify(taskList, null, 2))
 }, 100)
 
-const logFile = openSync('log.json', 'w');
+writeFileSync('log.json', '');
 
 const server = new WebSocket.Server({
   port: 1122
@@ -26,7 +26,7 @@ server.on('connection', function (socket) {
 
     const { start, stop, receiveMessage } = replicator.bind({
       onMessage: async (message) => {
-        writeSync(logFile, JSON.stringify({
+        appendFileSync('log.json', JSON.stringify({
           direction: 'up',
           client: id,
           ...snapshotToJson(schema, WObject.fromBinary(message)),
@@ -38,7 +38,7 @@ server.on('connection', function (socket) {
 
     // When you receive a message, send that message to every socket.
     socket.on('message', function (msg) {
-      writeSync(logFile, JSON.stringify({
+      appendFileSync('log.json', JSON.stringify({
         direction: 'down',
         client: id,
         ...snapshotToJson(schema, WObject.fromBinary(Buffer.from(msg as any))),

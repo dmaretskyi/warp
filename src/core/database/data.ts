@@ -26,6 +26,11 @@ export class DataObject {
   private data: Record<string, DataValue> = {};
   public version: number = 0;
 
+  /**
+   * Special values: $all, $parent.
+   */
+  public dirtyFields = new Set<string>();
+
   public readonly updateListeners = new Set<() => void>();
 
   /**
@@ -35,7 +40,7 @@ export class DataObject {
 
   get(key: string): DataValue {
     const value = this.data[key];
-    if(value) {
+    if(value !== undefined) {
       return value;
     }
 
@@ -52,7 +57,7 @@ export class DataObject {
       value.ownerObject = this;
     }
     this.data[key] = value;
-    this.markDirty();
+    this.markDirty([key]);
   }
 
   getParent() {
@@ -61,9 +66,13 @@ export class DataObject {
 
   setParent(parent: DataRef) {
     this.parent = parent;
+    this.markDirty(['$parent']);
   }
 
-  public markDirty() {
+  public markDirty(fields = ['$all']) {
+    for(const field of fields) {
+      this.dirtyFields.add(field);
+    }
     this.database?.markDirty(this);
   }
 
@@ -103,6 +112,9 @@ export class DataObject {
     }
   }
 
+  /**
+   * Full snapshot of the object.
+   */
   serialize(): WObject {
     return WObject.create({
       id: this.id,
@@ -113,25 +125,64 @@ export class DataObject {
     })
   }
 
+  /**
+   * Deserialize from a snapshot.
+   * Dirty fields that match will become clean, others will be kept dirty.
+   */
   deserialize(snapshot: WObject) {
     assert(snapshot.id === this.id);
 
-    this.parent = snapshot.parent ? new DataRef(snapshot.parent) : undefined;
+    this.dirtyFields.delete('$all');
+
     this.version = snapshot.version;
-    this.data = deserializationPostprocess(this.schemaType.toObject(this.schemaType.decode(snapshot.state)), this) as any;
+    if(snapshot.parent && snapshot.parent === this.parent?.id) {
+      this.dirtyFields.delete('$parent');
+    }
+    this.parent = snapshot.parent ? new DataRef(snapshot.parent) : undefined;
+
+    const newData = deserializationPostprocess(this.schemaType.toObject(this.schemaType.decode(snapshot.state)), this) as any;
+    for(const field of Object.keys(newData)) {
+      if(!this.dirtyFields.has(field)) {
+        this.data[field] = newData[field];
+      } else {
+        if(compareDataValue(this.data[field], newData[field])) {
+          this.dirtyFields.delete(field);
+          this.data[field] = newData[field];
+        }
+      }
+      
+    }
   }
 
+  /**
+   * Serialize object diff, with only dirty fields.
+   */
   serializeMutation(): WObject {
-    // TODO(dmaretskyi): Dirty fields.
+    const mutation: Record<string, DataValue> = {}
+    for(const field of this.dirtyFields) {
+      if(field === '$all') {
+        Object.assign(mutation, this.data);
+        break;
+      }
+      if(field === '$parent') {
+        continue;
+      }
+
+      mutation[field] = this.data[field];
+    }
+
     return WObject.create({
       id: this.id,
       type: this.typeName,
       version: this.version,
       parent: this.parent?.id,
-      mutation: this.schemaType.encode(serializationPreprocess(this.data)).finish(),
+      mutation: this.schemaType.encode(serializationPreprocess(mutation)).finish(),
     })
   }
 
+  /**
+   * Apply an object diff with a subset of fields.
+   */
   deserializeMutation(snapshot: WObject) {
     assert(snapshot.id === this.id);
 
@@ -149,7 +200,7 @@ function serializationPreprocess(data: DataValue | Record<string, DataValue>): a
     return { id: data.id };
   } else if(data instanceof DataArray) {
     return data.items.map(serializationPreprocess);
-  } else if(typeof data === 'object') {
+  } else if(typeof data === 'object' && data !== null) {
     const res: Record<string, any> = {};
     for(const key of Object.keys(data)) {
       res[key] = serializationPreprocess(data[key]);
@@ -169,7 +220,7 @@ function deserializationPostprocess(data: any, owner: DataObject): DataValue | R
       array.items.push(deserializationPostprocess(item, owner) as any);
     }
     return array;
-  } else if(typeof data === 'object') {
+  } else if(typeof data === 'object' && data !== null) {
     const res: Record<string, DataValue> = {};
     for(const key of Object.keys(data)) {
       res[key] = deserializationPostprocess(data[key], owner) as any;
@@ -207,4 +258,32 @@ export class DataArray {
   ) {}
 
   public readonly items: DataValue[] = [];
+}
+
+function compareDataValue(left: DataValue, right: DataValue) {
+  if(left instanceof DataRef && right instanceof DataRef) {
+    return left.id === right.id;
+  } else if(left instanceof DataArray && right instanceof DataArray) {
+    if(left.items.length !== right.items.length) {
+      return false;
+    }
+
+    for(let i = 0; i < left.items.length; i++) {
+      if(!compareDataValue(left.items[i], right.items[i])) {
+        return false;
+      }
+    }
+
+    return true;
+  } else if(typeof left === 'object' && typeof right === 'object') {
+    // for(const key of Object.keys(left)) {
+    //   if(!compareDataValue(left[key], right[key])) {
+    //     return false;
+    //   }
+    // }
+
+    return true;
+  } else {
+    return left === right;
+  }
 }

@@ -104,6 +104,7 @@ export class WarpObject {
     res.id = this.id;
     res['@type'] = this[kWarpInner].typeName;
     res['@version'] = this[kWarpInner].version;
+    res['@parent'] = this[kWarpInner].getParent()?.id ?? null;
     for(const field of this[kWarpInner].schemaType.fieldsArray) {
       if(field.name === 'id') {
         continue;
@@ -190,7 +191,7 @@ export class WarpList<T> implements Array<T> {
           if(wrapped instanceof DataRef && wrapped.getObject()) {
             this.data.ownerObject?.database?.import(wrapped.getObject()!);
           }
-          this.data.ownerObject?.markDirty()
+          this.data.ownerObject?.markDirty() // TODO(dmaretskyi): Mark only the field containing the array.
           this.data.ownerObject?.propagateUpdate();
           return true;
         } else {
