@@ -1,5 +1,5 @@
 import { DataArray, DataObject, DataRef } from './data'
-import { Contact, schema } from '../../example/gen/warp-example-task_list'
+import { Contact, schema } from '../../example/gen/schema'
 import { v4 } from 'uuid';
 import { expect } from 'expect';
 import { Database } from './database';

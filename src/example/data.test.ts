@@ -1,4 +1,4 @@
-import { Task, TaskList, schema } from "./gen/warp-example-task_list"
+import { Task, TaskList, schema } from "./gen/schema"
 import expect from 'expect'
 import { Database } from "../core/database"
 import { debugReplication, formatMutation } from "../core/database/utils"

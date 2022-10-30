@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { schema, Task, TaskList } from "../gen/warp-example-task_list";
+import { schema, Task, TaskList } from "../gen/schema";
 import { useDatabase, useObject } from "./common";
 import './App.css'
 

@@ -2,7 +2,7 @@ import { writeFileSync } from 'fs';
 import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
 import { Database } from '../../core/database';
-import { schema, TaskList } from '../gen/warp-example-task_list';
+import { schema, TaskList } from '../gen/schema';
 
 const database = new Database(schema)
 const taskList = database.getOrCreateRoot(TaskList);
