@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "tsc --noEmit",
     "gen": "node -r @swc-node/register src/core/codegen/main.ts",
     "proto": "protoc --ts_out src/core/gen --proto_path src/core/proto 'src/core/proto/sync.proto'",
     "test": "mocha -r @swc-node/register 'src/**/*.test.ts'",

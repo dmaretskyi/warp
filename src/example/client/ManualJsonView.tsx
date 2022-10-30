@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
+
 export const ManualJsonView = () => {
   const getData = () => {
     // return {
     //   objects: Array.from(database.objects.values()).filter(ref => ref.getObject()).map(ref => ref.getObject()!.frontend),
     // }
-    return database.getRootObject()?.frontend ?? null
+    // return database.getRootObject()?.frontend ?? null
   }
 
   const [jsonView, setJsonView] = useState(JSON.stringify(getData(), null, 2));

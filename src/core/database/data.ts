@@ -74,8 +74,10 @@ export class DataObject {
     }
   }
 
-  onImport(database: Database) {
-    this.database = database;
+  updateReferences() {
+    if(!this.database) {
+      return;
+    }
 
     if(this.parent) {
       this.parent = this.database.createRef(this.parent.id, this.parent);

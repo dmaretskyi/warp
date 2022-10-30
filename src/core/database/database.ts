@@ -40,7 +40,8 @@ export class Database {
     assert(object instanceof DataObject);
     const ref = this.createRef(object.id);
     ref.fill(object);
-    object.onImport(this);
+    object.database = this;
+    object.updateReferences();
     this.markDirty(object);
   }
 
@@ -103,7 +104,7 @@ export class Database {
       }
 
       obj.deserialize(mutation);
-      obj.onImport(this);
+      obj.updateReferences();
       obj.propagateUpdate();
       
       this.markDirty(obj);
