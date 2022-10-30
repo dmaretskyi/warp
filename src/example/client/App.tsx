@@ -4,7 +4,7 @@ import { useDatabase, useObject } from "./common";
 import './App.css'
 
 export const App = () => {
-  const taskList = useDatabase(TaskList, { schema, url: 'ws://localhost:1122' })
+  const taskList = useDatabase(TaskList, { schema, url: `ws://${location.hostname}:1122` })
 
   useObject(taskList)
 

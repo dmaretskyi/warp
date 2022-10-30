@@ -1,7 +1,8 @@
-import { writeFileSync } from 'fs';
+import { writeFileSync, openSync, writeSync } from 'fs';
 import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
-import { Database } from '../../core/database';
+import { Database, snapshotToJson } from '../../core/database';
+import { WObject } from '../../core/gen/sync';
 import { schema, TaskList } from '../gen/schema';
 
 const database = new Database(schema)
@@ -11,19 +12,25 @@ setInterval(() => {
   writeFileSync('data.json', JSON.stringify(taskList, null, 2))
 }, 100)
 
+const logFile = openSync('log.json', 'w');
+
 const server = new WebSocket.Server({
   port: 1122
 });
 
 server.on('connection', function (socket) {
   const id = v4()
-  console.log('new client', id)
+  console.log(`[${id}] connected`)
   try {
     const replicator = database.replicateUpstream();
 
     const { start, stop, receiveMessage } = replicator.bind({
       onMessage: async (message) => {
-        console.log('snd', id)
+        writeSync(logFile, JSON.stringify({
+          direction: 'up',
+          client: id,
+          ...snapshotToJson(schema, WObject.fromBinary(message)),
+        }, null, 2) + '\n')
         socket.send(message);
       }
     })
@@ -31,13 +38,17 @@ server.on('connection', function (socket) {
 
     // When you receive a message, send that message to every socket.
     socket.on('message', function (msg) {
-      console.log('rcv', id)
+      writeSync(logFile, JSON.stringify({
+        direction: 'down',
+        client: id,
+        ...snapshotToJson(schema, WObject.fromBinary(Buffer.from(msg as any))),
+      }, null, 2) + '\n')
       receiveMessage(Buffer.from(msg as any));
     });
 
     // When a socket closes, or disconnects, remove it from the array.
     socket.on('close', function () {
-      console.log('client disconnected')
+      console.log(`[${id}] disconnected`)
       stop()
     });
 

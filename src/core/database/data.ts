@@ -52,6 +52,7 @@ export class DataObject {
       value.ownerObject = this;
     }
     this.data[key] = value;
+    this.markDirty();
   }
 
   getParent() {

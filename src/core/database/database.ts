@@ -70,7 +70,7 @@ export class Database {
   }
 
   flushLater() {
-    if(this.flushing === undefined) {
+    if(this.flushing !== undefined) {
       return;
     }
     this.flushing = setTimeout(() => {
@@ -106,7 +106,7 @@ export class Database {
   }
 
   /**
-   * Mutation for a server that has more authority over the data.
+   * Mutation from a server that has more authority over the data.
    */
   downstreamMutation(mutation: WObject) {
     const ref = this.objects.get(mutation.id!);
@@ -116,8 +116,6 @@ export class Database {
       obj.deserialize(mutation);
       obj.updateReferences();
       obj.propagateUpdate();
-      
-      this.markDirty(obj);
     } else {
       const prototype = this.schema.prototypes.get(mutation.type!)!;
       const instance = new prototype();

@@ -1,18 +1,23 @@
-import { inspect } from "util";
 import { ReplicationSocket } from ".";
 import { WObject } from "../gen/sync";
 import { Schema } from "./schema";
 
-export function formatMutation(schema: Schema, snapshot: WObject) {
+export function snapshotToJson(schema: Schema, snapshot: WObject) {
   const type = schema.root.lookupType(snapshot.type!);
   const state = snapshot.state && type.decode(snapshot.state);
   const mutation = snapshot.mutation && type.decode(snapshot.mutation);
 
-  return inspect({
+  return {
     ...snapshot,
     state,
     mutation,
-  }, false, null, true);
+  }
+}
+
+export function formatMutation(schema: Schema, snapshot: WObject) {
+  const { inspect } = require('util');
+
+  return inspect(snapshotToJson(schema, snapshot), false, null, true);
 }
 
 export function bindReplicationSockets(left: ReplicationSocket, right: ReplicationSocket, onMessage: (direction: '>' | '<', message: Uint8Array) => void) {

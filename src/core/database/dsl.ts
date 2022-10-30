@@ -103,6 +103,7 @@ export class WarpObject {
     const res: any = {};
     res.id = this.id;
     res['@type'] = this[kWarpInner].typeName;
+    res['@version'] = this[kWarpInner].version;
     for(const field of this[kWarpInner].schemaType.fieldsArray) {
       if(field.name === 'id') {
         continue;
