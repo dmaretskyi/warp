@@ -82,27 +82,36 @@ export class Database {
     clearTimeout(this.flushing);
     this.flushing = undefined;
 
-    const mutations: WObject[] = [];
-    for(const id of this.dirtyObjects) {
-      mutations.push(id.serialize());
-    }
-    this.dirtyObjects.clear();
-    for(const mutation of mutations) {
-      this.downstreamReplication?.(mutation);
-      for(const hook of this.upstreamReplication) {
-        hook(mutation);
+    if(this.downstreamReplication) {
+      for(const id of this.dirtyObjects) {
+        this.downstreamReplication?.(id.serializeMutation());
       }
     }
+
+    // upstream
+    {
+      const mutations: WObject[] = [];
+      for(const obj of this.dirtyObjects) {
+        mutations.push(obj.serialize());
+      }
+      
+      this.dirtyObjects.clear();
+      for(const mutation of mutations) {
+        for(const hook of this.upstreamReplication) {
+          hook(mutation);
+        }
+      }
+    }
+   
   }
 
-  externalMutation(mutation: WObject) {
+  /**
+   * Mutation for a server that has more authority over the data.
+   */
+  downstreamMutation(mutation: WObject) {
     const ref = this.objects.get(mutation.id!);
     if(ref?.getObject()) {
       const obj = ref.getObject()!
-
-      if(WObject.equals(mutation, obj.serialize())) {
-        return;
-      }
 
       obj.deserialize(mutation);
       obj.updateReferences();
@@ -121,6 +130,35 @@ export class Database {
   }
 
   /**
+   * Mutation from a client with less authority over the data.
+   */
+  upstreamMutation(mutation: WObject) {
+    const ref = this.objects.get(mutation.id!);
+    if(ref?.getObject()) {
+      const obj = ref.getObject()!
+
+      if(mutation.version < obj.version) {
+        return;
+      }
+
+      obj.deserializeMutation(mutation);
+      obj.updateReferences();
+      obj.propagateUpdate();
+      obj.commit();
+      
+      this.markDirty(obj);
+    } else {
+      const prototype = this.schema.prototypes.get(mutation.type!)!;
+      const instance = new prototype();
+
+      const inner = instance[kWarpInner];
+      inner.id = mutation.id!;
+      inner.deserializeMutation(mutation);
+      this.import(inner);
+    }
+  }
+
+  /**
    * Replicate with a server that has more authority over the data.
    */
   replicateDownstream(): ReplicationSocket {
@@ -129,7 +167,7 @@ export class Database {
         return {
           receiveMessage: (message) => {
             const wobject = WObject.fromBinary(message);
-            this.externalMutation(wobject);
+            this.downstreamMutation(wobject);
           },
           start: () => {
             assert(this.downstreamReplication === undefined, 'Only one downstream replication socket is supported');
@@ -165,7 +203,7 @@ export class Database {
         return {
           receiveMessage: (message) => {
             const wobject = WObject.fromBinary(message);
-            this.externalMutation(wobject);
+            this.upstreamMutation(wobject);
           },
           start: () => {
             this.upstreamReplication.add(hook); 

@@ -3,13 +3,15 @@ import { ReplicationSocket } from ".";
 import { WObject } from "../gen/sync";
 import { Schema } from "./schema";
 
-export function formatMutation(schema: Schema, mutation: WObject) {
-  const type = schema.root.lookupType(mutation.type!);
-  const state = mutation.state && type.decode(mutation.state);
+export function formatMutation(schema: Schema, snapshot: WObject) {
+  const type = schema.root.lookupType(snapshot.type!);
+  const state = snapshot.state && type.decode(snapshot.state);
+  const mutation = snapshot.mutation && type.decode(snapshot.mutation);
 
   return inspect({
-    ...mutation,
+    ...snapshot,
     state,
+    mutation,
   }, false, null, true);
 }
 

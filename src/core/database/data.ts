@@ -24,6 +24,7 @@ export class DataObject {
   public database?: Database;
   private parent?: DataRef;
   private data: Record<string, DataValue> = {};
+  public version: number = 0;
 
   public readonly updateListeners = new Set<() => void>();
 
@@ -105,7 +106,7 @@ export class DataObject {
     return WObject.create({
       id: this.id,
       type: this.typeName,
-      version: 0,
+      version: this.version,
       parent: this.parent?.id,
       state: this.schemaType.encode(serializationPreprocess(this.data)).finish(),
     })
@@ -115,7 +116,30 @@ export class DataObject {
     assert(snapshot.id === this.id);
 
     this.parent = snapshot.parent ? new DataRef(snapshot.parent) : undefined;
+    this.version = snapshot.version;
     this.data = deserializationPostprocess(this.schemaType.toObject(this.schemaType.decode(snapshot.state)), this) as any;
+  }
+
+  serializeMutation(): WObject {
+    // TODO(dmaretskyi): Dirty fields.
+    return WObject.create({
+      id: this.id,
+      type: this.typeName,
+      version: this.version,
+      parent: this.parent?.id,
+      mutation: this.schemaType.encode(serializationPreprocess(this.data)).finish(),
+    })
+  }
+
+  deserializeMutation(snapshot: WObject) {
+    assert(snapshot.id === this.id);
+
+    this.parent = snapshot.parent ? new DataRef(snapshot.parent) : undefined;
+    this.data = Object.assign(this.data, deserializationPostprocess(this.schemaType.toObject(this.schemaType.decode(snapshot.mutation)), this));
+  }
+
+  commit() {
+    this.version++;
   }
 }
 

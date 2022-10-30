@@ -51,7 +51,7 @@ describe('data dsl', () => {
   it('incoming mutations', () => {
     const database = new Database(schema)
 
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '600fa93e-0609-41ee-b391-41a69661ed05',
       type: 'warp.example.task_list.TaskList',
       state: {
@@ -61,13 +61,13 @@ describe('data dsl', () => {
         ]
       },
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: 'bdd1262f-0def-4d31-a144-0742189c0724',
       type: 'warp.example.task_list.Task',
       state: { title: 'Buy milk' },
       parent: '600fa93e-0609-41ee-b391-41a69661ed05'
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '9cf9c2c9-f281-4174-a6bb-005656f463d5',
       type: 'warp.example.task_list.Task',
       state: { title: 'Buy eggs' },
@@ -87,20 +87,20 @@ describe('data dsl', () => {
   it('incoming partial mutations', () => {
     const database = new Database(schema)
 
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '600fa93e-0609-41ee-b391-41a69661ed05',
       type: 'warp.example.task_list.TaskList',
       state: {
         tasks: []
       },
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: 'bdd1262f-0def-4d31-a144-0742189c0724',
       type: 'warp.example.task_list.Task',
       state: { title: 'Buy milk' },
       parent: '600fa93e-0609-41ee-b391-41a69661ed05'
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '600fa93e-0609-41ee-b391-41a69661ed05',
       type: 'warp.example.task_list.TaskList',
       state: {
@@ -109,13 +109,13 @@ describe('data dsl', () => {
         ]
       },
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '9cf9c2c9-f281-4174-a6bb-005656f463d5',
       type: 'warp.example.task_list.Task',
       state: { title: 'Buy eggs' },
       parent: '600fa93e-0609-41ee-b391-41a69661ed05'
     }))
-    database.externalMutation(createMutation({
+    database.downstreamMutation(createMutation({
       id: '600fa93e-0609-41ee-b391-41a69661ed05',
       type: 'warp.example.task_list.TaskList',
       state: {

@@ -1,6 +1,7 @@
 import expect from 'expect'
 import { Database, kWarpInner } from "../core/database"
-import { bindReplicationSockets } from "../core/database/utils"
+import { bindReplicationSockets, formatMutation } from "../core/database/utils"
+import { WObject } from '../core/gen/sync'
 import { schema, Task, TaskList } from "./gen/schema"
 
 describe('replication', () => {
@@ -8,7 +9,7 @@ describe('replication', () => {
     const server = new Database(schema)
 
     const client = new Database(schema)
-    bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
+    bindReplicationSockets(server.replicateUpstream(), client.replicateDownstream(), (direction, message) => {
       // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
     })
 
@@ -36,7 +37,7 @@ describe('replication', () => {
     let serverSideTaskList: TaskList
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
+      const stop = bindReplicationSockets(server.replicateUpstream(), client.replicateDownstream(), (direction, message) => {
         // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
       })
 
@@ -53,7 +54,7 @@ describe('replication', () => {
 
     {
       const client = new Database(schema)
-      const stop = bindReplicationSockets(server.replicateDownstream(), client.replicateDownstream(), (direction, message) => {
+      const stop = bindReplicationSockets(server.replicateUpstream(), client.replicateDownstream(), (direction, message) => {
         // console.log(direction + ' ', formatMutation(schema, WObject.fromBinary(message)));
       })
 
