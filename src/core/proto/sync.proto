@@ -14,3 +14,12 @@ message WObject {
 
   bytes mutation = 11;
 }
+
+message Sync {}
+
+message ProtocolMessage {
+  oneof payload {
+    Sync sync = 1;
+    WObject object = 2;
+  }
+}

@@ -1,5 +1,5 @@
 import { Database } from ".";
-import { WObject } from "../gen/sync";
+import { ProtocolMessage, WObject } from "../gen/sync";
 import { Schema } from "./schema";
 
 export function createClient(schema: Schema, url: string) {
@@ -10,11 +10,12 @@ export function createClient(schema: Schema, url: string) {
 
   const socket = new WebSocket(url);
 
+  console.log(database)
+
   socket.onopen = () => {
     const { start, stop, receiveMessage } = replicator.bind({
       onMessage: async (message) => {
-        formatMutation(schema, WObject.fromBinary(message), '<');
-        console.log(database)
+        // formatMutation(schema, ProtocolMessage.fromBinary(message), '<');
         socket.send(message);
       }
     })
@@ -22,7 +23,7 @@ export function createClient(schema: Schema, url: string) {
     socket.addEventListener("message", async (event) => {
       if(event.data instanceof Blob) {
         const buf = new Uint8Array(await event.data.arrayBuffer());
-        formatMutation(schema, WObject.fromBinary(buf), '>');
+        // formatMutation(schema, WObject.fromBinary(buf), '>');
         receiveMessage(buf);
         console.log(database)
       }

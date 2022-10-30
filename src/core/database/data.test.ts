@@ -3,7 +3,7 @@ import { Contact, schema } from '../../example/gen/schema'
 import { v4 } from 'uuid';
 import { expect } from 'expect';
 import { Database } from './database';
-import { snapshotToJson } from './utils';
+import { messageToJson } from './utils';
 
 describe('database/data', () => {
   it('basic props', () => {

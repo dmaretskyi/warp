@@ -1,23 +1,32 @@
 import { ReplicationSocket } from ".";
-import { WObject } from "../gen/sync";
+import { ProtocolMessage, WObject } from "../gen/sync";
 import { Schema } from "./schema";
 
-export function snapshotToJson(schema: Schema, snapshot: WObject) {
-  const type = schema.root.lookupType(snapshot.type!);
-  const state = snapshot.state && type.decode(snapshot.state);
-  const mutation = snapshot.mutation && type.decode(snapshot.mutation);
-
-  return {
-    ...snapshot,
-    state,
-    mutation,
+export function messageToJson(schema: Schema, message: ProtocolMessage) {
+  switch(message.payload.oneofKind) {
+    case 'sync': {
+      return {
+        sync: true,
+      }
+    }
+    case 'object': {
+      const type = schema.root.lookupType(message.payload.object.type!);
+      const state = message.payload.object.state && type.decode(message.payload.object.state);
+      const mutation = message.payload.object.mutation && type.decode(message.payload.object.mutation);
+    
+      return {
+        ...message.payload.object,
+        state,
+        mutation,
+      }
+    }
   }
 }
 
-export function formatMutation(schema: Schema, snapshot: WObject) {
+export function formatMutation(schema: Schema, message: ProtocolMessage) {
   const { inspect } = require('util');
 
-  return inspect(snapshotToJson(schema, snapshot), false, null, true);
+  return inspect(messageToJson(schema, message), false, null, true);
 }
 
 export function bindReplicationSockets(left: ReplicationSocket, right: ReplicationSocket, onMessage: (direction: '>' | '<', message: Uint8Array) => void) {

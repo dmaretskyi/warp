@@ -1,5 +1,5 @@
 import { assert } from "../assert";
-import { WObject } from "../gen/sync";
+import { WObject, ProtocolMessage } from "../gen/sync";
 import { kWarpInner, WarpObject, WarpPrototype } from "./dsl";
 import { DataObject, DataRef } from "./data";
 import { Schema } from "./schema";
@@ -173,13 +173,27 @@ export class Database {
       bind: ({ onMessage }) => {
         return {
           receiveMessage: (message) => {
-            const wobject = WObject.fromBinary(message);
-            this.downstreamMutation(wobject);
+            const protocol = ProtocolMessage.fromBinary(message);
+            switch(protocol.payload.oneofKind) {
+              case 'sync': {
+                console.log('sync');
+                break;
+              }
+              case 'object': {
+                this.downstreamMutation(protocol.payload.object);
+                break;
+              }
+            }
           },
           start: () => {
             assert(this.downstreamReplication === undefined, 'Only one downstream replication socket is supported');
             this.downstreamReplication = (mutation) => {
-              onMessage(WObject.toBinary(mutation));
+              onMessage(ProtocolMessage.toBinary({
+                payload: {
+                  oneofKind: 'object',
+                  object: mutation,
+                }
+              }));
             };
     
             for(const object of this.objects.values()) {
@@ -204,13 +218,27 @@ export class Database {
     return {
       bind: ({ onMessage }) => {
         const hook = (mutation: WObject) => {
-          onMessage(WObject.toBinary(mutation));
+          onMessage(ProtocolMessage.toBinary({
+            payload: {
+              oneofKind: 'object',
+              object: mutation,
+            }
+          }));
         };
 
         return {
           receiveMessage: (message) => {
-            const wobject = WObject.fromBinary(message);
-            this.upstreamMutation(wobject);
+            const protocol = ProtocolMessage.fromBinary(message);
+            switch(protocol.payload.oneofKind) {
+              case 'sync': {
+                console.log('client sync');
+                break;
+              }
+              case 'object': {
+                this.upstreamMutation(protocol.payload.object);
+                break;
+              }
+            }
           },
           start: () => {
             this.upstreamReplication.add(hook); 

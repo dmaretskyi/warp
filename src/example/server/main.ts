@@ -1,8 +1,8 @@
 import { writeFileSync, openSync, writeSync, appendFileSync } from 'fs';
 import { v4 } from 'uuid';
 import { WebSocket } from 'ws'
-import { Database, snapshotToJson } from '../../core/database';
-import { WObject } from '../../core/gen/sync';
+import { Database, messageToJson } from '../../core/database';
+import { ProtocolMessage, WObject } from '../../core/gen/sync';
 import { schema, TaskList } from '../gen/schema';
 
 const database = new Database(schema)
@@ -29,7 +29,7 @@ server.on('connection', function (socket) {
         appendFileSync('log.json', JSON.stringify({
           direction: 'up',
           client: id,
-          ...snapshotToJson(schema, WObject.fromBinary(message)),
+          ...messageToJson(schema, ProtocolMessage.fromBinary(message)),
         }, null, 2) + '\n')
         socket.send(message);
       }
@@ -41,7 +41,7 @@ server.on('connection', function (socket) {
       appendFileSync('log.json', JSON.stringify({
         direction: 'down',
         client: id,
-        ...snapshotToJson(schema, WObject.fromBinary(Buffer.from(msg as any))),
+        ...messageToJson(schema, ProtocolMessage.fromBinary(Buffer.from(msg as any))),
       }, null, 2) + '\n')
       receiveMessage(Buffer.from(msg as any));
     });
