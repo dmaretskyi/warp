@@ -27,17 +27,16 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
 
     constructor(opts?: Record<string, unknown>) {
       super();
-      this[kWarpInner] = new WarpInner(new DataObject(type, uuid.v4()));
-      this[kWarpInner].data.frontend = this;
+      this[kWarpInner] = new DataObject(type, uuid.v4());
+      this[kWarpInner].frontend = this;
       if(opts) {
         for(const key in opts) {
-          this[kWarpInner].data.set(key, wrapData(opts[key]));
+          this[kWarpInner].set(key, wrapData(opts[key]));
         }
       }
     }
-
-   
   }
+  
 
   for(const field of type.fieldsArray) {
     field.resolve();
@@ -48,6 +47,10 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
         },
         set(this: WarpObject, value: unknown) {
           this[kWarpInner].set(field.name, wrapData(value));
+          if(this[kWarpInner].database) {
+            this[kWarpInner].database.import(this[kWarpInner]);
+          }
+          this[kWarpInner].propagateUpdate();
         },
       })  
     } else if(field.resolvedType instanceof pb.Type) {
@@ -57,22 +60,28 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
         },
         set(this: WarpObject, value: WarpObject) {
           this[kWarpInner].set(field.name, wrapData(value));
-          value[kWarpInner].data.setParent(new DataRef(this.id).fill(this[kWarpInner].data));
+          value[kWarpInner].setParent(new DataRef(this.id).fill(this[kWarpInner]));
+          if(this[kWarpInner].database) {
+            this[kWarpInner].database.import(this[kWarpInner]);
+          }
+          this[kWarpInner].propagateUpdate();
         },
       })
     } else if(field.name === 'id') {
       Object.defineProperty(klass.prototype, 'id', {
         get(this: WarpObject) {
-          return this[kWarpInner].data.id;
+          return this[kWarpInner].id;
         },
       })
     } else {
       Object.defineProperty(klass.prototype, field.name, {
         get(this: WarpObject) {
-          return unwrapData(this[kWarpInner].get(field.name));
+          return this[kWarpInner].get(field.name);
         },
         set(this: WarpObject, value: unknown) {
-          this[kWarpInner].set(field.name, wrapData(value));
+          assert(typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean')
+          this[kWarpInner].set(field.name, value);
+          this[kWarpInner].propagateUpdate();
         },
       }) 
     }
@@ -85,7 +94,7 @@ export const kWarpInner = Symbol('WarpInner');
 
 
 export class WarpObject {
-  protected [kWarpInner]!: WarpInner;
+  protected [kWarpInner]!: DataObject;
 
   declare readonly id: string;
 
@@ -94,13 +103,13 @@ export class WarpObject {
   toJSON() {
     const res: any = {};
     res.id = this.id;
-    res['@type'] = this[kWarpInner].data.typeName;
-    for(const field of this[kWarpInner].data.schemaType.fieldsArray) {
+    res['@type'] = this[kWarpInner].typeName;
+    for(const field of this[kWarpInner].schemaType.fieldsArray) {
       if(field.name === 'id') {
         continue;
       }
 
-      const value = unwrapData(this[kWarpInner].data.get(field.name))
+      const value = unwrapData(this[kWarpInner].get(field.name))
       if(value instanceof WarpObject) {
         res[field.name] = value.toJSON();
       } else if(value instanceof WarpList) {
@@ -123,34 +132,16 @@ export type LinkSlot = { value?: WarpObject }
 
 
 export function onUpdate(obj: WarpObject, callback: () => void) {
-  obj[kWarpInner].data.updateListeners.add(callback);
+  obj[kWarpInner].updateListeners.add(callback);
   return () => {
-    obj[kWarpInner].data.updateListeners.delete(callback);
+    obj[kWarpInner].updateListeners.delete(callback);
   }
 }
 
-export class WarpInner {
-  constructor(
-    public data: DataObject
-  ) {}
-
-
-  public get(name: string): DataValue {
-    return this.data.get(name);
-  }
-
-  public set(name: string, value: DataValue): void {
-    this.data.set(name, value);
-    if(this.data.database) {
-      this.data.database.import(this.data);
-    }
-    this.data.propagateUpdate();
-  }
-}
 
 function wrapData(value: unknown): DataValue {
   if(value instanceof WarpObject) {
-    return new DataRef(value.id).fill(value[kWarpInner].data);
+    return new DataRef(value.id).fill(value[kWarpInner]);
   } else if(value instanceof WarpList) {
     return value.data;
   } else if(Array.isArray(value)) {
@@ -177,7 +168,7 @@ export class WarpList<T> implements Array<T> {
     const data = new DataArray();
     data.items.push(...items.map(item => {
       if(item instanceof WarpObject) {
-        return new DataRef(item.id).fill(item[kWarpInner].data);
+        return new DataRef(item.id).fill(item[kWarpInner]);
       }
       return item as DataValue;
     }))

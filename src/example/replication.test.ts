@@ -1,10 +1,8 @@
-import { Task, TaskList, schema } from "./gen/warp-example-task_list"
 import expect from 'expect'
 import { Database } from "../core/database"
-import { createClient } from "../core/database/client"
-import { bindReplicationSockets, formatMutation } from "../core/database/utils"
-import { WObject } from "../core/gen/sync"
+import { bindReplicationSockets } from "../core/database/utils"
 import { kWarpInner } from "../core/schema"
+import { schema, Task, TaskList } from "./gen/warp-example-task_list"
 
 describe('replication', () => {
   it('client to server', () => {
@@ -16,7 +14,7 @@ describe('replication', () => {
     })
 
     const taskList = new TaskList()
-    client.import(taskList[kWarpInner].data)
+    client.import(taskList[kWarpInner])
 
     taskList.tasks.push(new Task({ title: 'Buy milk' }))
     taskList.tasks.push(new Task({ title: 'Buy eggs' }))
@@ -42,7 +40,7 @@ describe('replication', () => {
       })
 
       const taskList = serverSideTaskList = new TaskList()
-      client.import(taskList[kWarpInner].data)
+      client.import(taskList[kWarpInner])
 
       taskList.tasks.push(new Task({ title: 'Buy milk' }))
       taskList.tasks.push(new Task({ title: 'Buy eggs' }))

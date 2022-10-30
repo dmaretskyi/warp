@@ -1,6 +1,6 @@
 import { assert } from "../assert";
 import { WObject } from "../gen/sync";
-import { kWarpInner, Schema, WarpInner, WarpObject, WarpPrototype } from "../schema";
+import { kWarpInner, Schema, WarpObject, WarpPrototype } from "../schema";
 import { DataObject, DataRef } from "./data";
 
 export class Database {
@@ -37,6 +37,7 @@ export class Database {
   }
 
   import(object: DataObject) {
+    assert(object instanceof DataObject);
     const ref = this.createRef(object.id);
     ref.fill(object);
     object.onImport(this);
@@ -61,7 +62,7 @@ export class Database {
       return root.frontend as T;
     } else {
       const instance = new prototype();
-      this.import(instance[kWarpInner].data);
+      this.import(instance[kWarpInner]);
       return instance;
     }
   }
@@ -99,9 +100,9 @@ export class Database {
       const instance = new prototype();
 
       const inner = instance[kWarpInner];
-      inner.data.id = mutation.id!;
-      inner.data.deserialize(mutation);
-      this.import(inner.data);
+      inner.id = mutation.id!;
+      inner.deserialize(mutation);
+      this.import(inner);
     }
   }
 

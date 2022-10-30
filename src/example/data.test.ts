@@ -13,7 +13,7 @@ describe('data dsl', () => {
     })
 
     const task = new Task({ title: 'Buy milk' })
-    database.import(task[kWarpInner].data)
+    database.import(task[kWarpInner])
 
     expect(task.title).toBe('Buy milk')
 
@@ -28,7 +28,7 @@ describe('data dsl', () => {
     })
 
     const taskList = new TaskList()
-    database.import(taskList[kWarpInner].data)
+    database.import(taskList[kWarpInner])
 
     taskList.tasks.push(new Task({ title: 'Buy milk' }))
     taskList.tasks.push(new Task({ title: 'Buy eggs' }))
