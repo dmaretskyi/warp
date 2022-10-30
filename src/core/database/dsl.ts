@@ -1,11 +1,11 @@
 import { Schema } from "./schema";
 import * as uuid from 'uuid';
 import * as pb from 'protobufjs';
-import { Database } from "../database";
+import { Database } from ".";
 import { WObject } from "../gen/sync";
 import { inspect } from "util";
 import { assert } from "../assert";
-import { DataArray, DataObject, DataRef, DataValue } from "../database/data";
+import { DataArray, DataObject, DataRef, DataValue } from "./data";
 
 export interface WarpPrototype<T extends WarpObject = WarpObject> {
   new (opts?: Record<string, unknown>): T

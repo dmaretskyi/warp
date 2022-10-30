@@ -1,5 +1,5 @@
 
-import { generateObjectPrototype, Schema, WarpList } from "../../core/schema";
+import { generateObjectPrototype, Schema, WarpList } from "../../core/database";
 
 const schemaJson = "{\"nested\":{\"warp\":{\"nested\":{\"example\":{\"nested\":{\"task_list\":{\"nested\":{\"TaskList\":{\"options\":{\"(warp_object)\":true},\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"tasks\":{\"rule\":\"repeated\",\"type\":\"Task\",\"id\":2}}},\"Task\":{\"options\":{\"(warp_object)\":true},\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"title\":{\"type\":\"string\",\"id\":2},\"count\":{\"type\":\"int32\",\"id\":3},\"completed\":{\"type\":\"bool\",\"id\":4}}},\"Person\":{\"options\":{\"(warp_object)\":true},\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"name\":{\"type\":\"string\",\"id\":2},\"contact\":{\"type\":\"Contact\",\"id\":3}}},\"Contact\":{\"options\":{\"(warp_object)\":true},\"fields\":{\"id\":{\"type\":\"string\",\"id\":1},\"email\":{\"type\":\"string\",\"id\":2}}}}}}}}}}}"
 export const schema = Schema.fromJson(schemaJson);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { createClient } from "../../core/database/client"
-import { onUpdate, Schema, WarpObject, WarpPrototype } from "../../core/schema"
+import { onUpdate, Schema, WarpObject, WarpPrototype } from "../../core/database"
 
 export const useObject = (obj?: WarpObject | null) => {
   const [, forceUpdate] = useState({})

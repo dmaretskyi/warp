@@ -1,7 +1,8 @@
 import { assert } from "../assert";
 import { WObject } from "../gen/sync";
-import { kWarpInner, Schema, WarpObject, WarpPrototype } from "../schema";
+import { kWarpInner, WarpObject, WarpPrototype } from "./dsl";
 import { DataObject, DataRef } from "./data";
+import { Schema } from "./schema";
 
 export class Database {
   constructor(public readonly schema: Schema) {}

@@ -1,9 +1,9 @@
 import { Task, TaskList, schema } from "./gen/schema"
 import expect from 'expect'
-import { Database } from "../core/database"
+import { Database, kWarpInner } from "../core/database"
 import { debugReplication, formatMutation } from "../core/database/utils"
 import { WObject } from "../core/gen/sync"
-import { kWarpInner } from "../core/schema"
+import {  } from "../core/database"
 
 describe('data dsl', () => {
   it('props', () => {

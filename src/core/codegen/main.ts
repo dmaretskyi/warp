@@ -7,7 +7,7 @@ const root = new pb.Root();
 root.loadSync('src/example/proto/task_list.proto');
 
 let content = `
-import { generateObjectPrototype, Schema, WarpList } from "../../core/schema";
+import { generateObjectPrototype, Schema, WarpList } from "../../core/database";
 
 `
 

@@ -1,7 +1,6 @@
 import expect from 'expect'
-import { Database } from "../core/database"
+import { Database, kWarpInner } from "../core/database"
 import { bindReplicationSockets } from "../core/database/utils"
-import { kWarpInner } from "../core/schema"
 import { schema, Task, TaskList } from "./gen/schema"
 
 describe('replication', () => {

@@ -1,7 +1,6 @@
-import { inspect } from "util";
-import { Database } from "."; 
+import { Database } from ".";
 import { WObject } from "../gen/sync";
-import { Schema, WarpObject } from "../schema";
+import { Schema } from "./schema";
 
 export function createClient(schema: Schema, url: string) {
   console.log('create client', url);

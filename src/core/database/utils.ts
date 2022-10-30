@@ -1,7 +1,7 @@
 import { inspect } from "util";
 import { ReplicationSocket } from ".";
 import { WObject } from "../gen/sync";
-import { Schema } from "../schema";
+import { Schema } from "./schema";
 
 export function formatMutation(schema: Schema, mutation: WObject) {
   const type = schema.root.lookupType(mutation.type!);
