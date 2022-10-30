@@ -18,6 +18,8 @@ describe('replication', () => {
 
     taskList.tasks.push(new Task({ title: 'Buy milk' }))
     taskList.tasks.push(new Task({ title: 'Buy eggs' }))
+    
+    client.flush();
 
     const serverSideTaskList = server.getOrCreateRoot(TaskList);
 
@@ -44,6 +46,8 @@ describe('replication', () => {
 
       taskList.tasks.push(new Task({ title: 'Buy milk' }))
       taskList.tasks.push(new Task({ title: 'Buy eggs' }))
+
+      client.flush();
 
       stop()
     }

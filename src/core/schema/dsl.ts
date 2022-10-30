@@ -92,7 +92,6 @@ export function generateObjectPrototype(schema: Schema, name: string): WarpProto
 
 export const kWarpInner = Symbol('WarpInner');
 
-
 export class WarpObject {
   protected [kWarpInner]!: DataObject;
 
@@ -128,16 +127,12 @@ export class WarpObject {
   }
 }
 
-export type LinkSlot = { value?: WarpObject }
-
-
 export function onUpdate(obj: WarpObject, callback: () => void) {
   obj[kWarpInner].updateListeners.add(callback);
   return () => {
     obj[kWarpInner].updateListeners.delete(callback);
   }
 }
-
 
 function wrapData(value: unknown): DataValue {
   if(value instanceof WarpObject) {

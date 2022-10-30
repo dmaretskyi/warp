@@ -4,11 +4,11 @@ import { kWarpInner, Schema, WarpObject, WarpPrototype } from "../schema";
 import { DataObject, DataRef } from "./data";
 
 export class Database {
-
   constructor(public readonly schema: Schema) {}
 
   public readonly objects = new Map<string, DataRef>();
   public readonly dirtyObjects = new Set<DataObject>();
+  public flushing?: NodeJS.Timeout;
 
   createRef(id: string, existing?: DataRef): DataRef {
     if(existing) {
@@ -46,7 +46,7 @@ export class Database {
 
   markDirty(object: DataObject) {
     this.dirtyObjects.add(object);
-    this.flush(); // TODO: Defer.
+    this.flushLater();
   }
 
   private downstreamReplication?: (mutation: WObject) => void;
@@ -67,7 +67,19 @@ export class Database {
     }
   }
 
+  flushLater() {
+    if(this.flushing === undefined) {
+      return;
+    }
+    this.flushing = setTimeout(() => {
+      this.flush();
+    })
+  }
+
   flush() {
+    clearTimeout(this.flushing);
+    this.flushing = undefined;
+
     const mutations: WObject[] = [];
     for(const id of this.dirtyObjects) {
       mutations.push(id.serialize());
